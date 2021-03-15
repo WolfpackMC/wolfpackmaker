@@ -12,6 +12,7 @@ steps:
         from_secret: aws_secret_access_key
       PLUGIN_PATH_STYLE: true
       PLUGIN_BUCKET: "wolfpackmaker"
+      PLUGIN_ENDPOINT: http://10.200.0.16:9199
     pull: true
     settings:
       restore: true
@@ -40,6 +41,7 @@ steps:
         from_secret: aws_secret_access_key
       PLUGIN_PATH_STYLE: true
       PLUGIN_BUCKET: "wolfpackmaker"
+      PLUGIN_ENDPOINT: http://10.200.0.16:9199
     pull: true
     settings:
       rebuild: true
