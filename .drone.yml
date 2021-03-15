@@ -13,7 +13,7 @@ steps:
       PLUGIN_PATH_STYLE: true
       PLUGIN_BUCKET: "wolfpackmaker"
       PLUGIN_ENDPOINT: http://10.200.0.16:9199
-      PLUGIN_REGION: ''
+      PLUGIN_REGION: 'default'
     pull: true
     settings:
       restore: true
@@ -43,7 +43,7 @@ steps:
       PLUGIN_PATH_STYLE: true
       PLUGIN_BUCKET: "wolfpackmaker"
       PLUGIN_ENDPOINT: http://10.200.0.16:9199
-      PLUGIN_REGION: ''
+      PLUGIN_REGION: 'default'
     pull: true
     settings:
       rebuild: true
