@@ -18,9 +18,6 @@ steps:
       archive_format: "gzip"
       mount:
         - '/drone/src/wolfpackmaker_build'
-    volumes:
-    - name: cache
-      path: /tmp/cache
   
   - name: build
     image: python:latest
@@ -49,6 +46,3 @@ steps:
       # filesystem_cache_root: "/tmp/cache"
       mount:
         - '/drone/src/wolfpackmaker_build'
-    volumes:
-    - name: cache
-      path: /tmp/cache
