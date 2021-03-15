@@ -11,13 +11,14 @@ steps:
       AWS_SECRET_ACCESS_KEY:
         from_secret: aws_secret_access_key
       PLUGIN_PATH_STYLE: true
+      PLUGIN_BUCKET: "wolfpackmaker"
     pull: true
     settings:
       restore: true
       cache_key: "wolfpackmaker"
       archive_format: "gzip"
       mount:
-        - '/drone/src/wolfpackmaker_build'
+        - 'wolfpackmaker_build'
   
   - name: build
     image: python:latest
@@ -38,6 +39,7 @@ steps:
       AWS_SECRET_ACCESS_KEY:
         from_secret: aws_secret_access_key
       PLUGIN_PATH_STYLE: true
+      PLUGIN_BUCKET: "wolfpackmaker"
     pull: true
     settings:
       rebuild: true
@@ -45,4 +47,4 @@ steps:
       archive_format: "gzip"
       # filesystem_cache_root: "/tmp/cache"
       mount:
-        - '/drone/src/wolfpackmaker_build'
+        - 'wolfpackmaker_build'
