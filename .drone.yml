@@ -29,6 +29,9 @@ steps:
       - pip install -r requirements.txt
       - pip install git+https://git.kalka.io/kalka/packmaker.git
       - pyinstaller wolfpackmaker.py -y
+    settings:
+      mount:
+      - '/usr/local/lib/python3.9'
 
   - name: rebuild-cache
     image: meltwater/drone-cache:dev
