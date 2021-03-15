@@ -37,18 +37,18 @@ steps:
       - pyinstaller wolfpackmaker.py -y
       - zip -r wolfpackmaker.zip dist
 
-- name: upload
-  image: plugins/gitea-release
-  settings:
-    api_key:
-      from_secret: api_key
-    base_url: https://git.kalka.io
-    title: ${DRONE_TAG}
-    note: ${DRONE_COMMIT_MESSAGE}
-    files:
-      - wolfpackmaker.zip
-  when:
-    event: tag
+  - name: upload
+    image: plugins/gitea-release
+    settings:
+      api_key:
+        from_secret: api_key
+      base_url: https://git.kalka.io
+      title: ${DRONE_TAG}
+      note: ${DRONE_COMMIT_MESSAGE}
+      files:
+        - wolfpackmaker.zip
+    when:
+      event: tag
 
   - name: rebuild-cache
     image: meltwater/drone-cache:dev
