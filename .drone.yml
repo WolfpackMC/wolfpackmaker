@@ -3,7 +3,7 @@ type: docker
 name: build
 
 steps:
-  - name: restore-cache-with-filesystem
+  - name: restore-cache
     image: meltwater/drone-cache:dev
     environment:
       AWS_ACCESS_KEY_ID:
@@ -12,7 +12,6 @@ steps:
         from_secret: aws_secret_access_key
     pull: true
     settings:
-      backend: "filesystem"
       restore: true
       cache_key: "wolfpackmaker"
       archive_format: "gzip"
@@ -30,7 +29,7 @@ steps:
       - pip install git+https://git.kalka.io/kalka/packmaker.git
       - pyinstaller wolfpackmaker.py -y
 
-  - name: rebuild-cache-with-filesystem
+  - name: rebuild-cache
     image: meltwater/drone-cache:dev
     environment:
       AWS_ACCESS_KEY_ID:
@@ -39,7 +38,6 @@ steps:
         from_secret: aws_secret_access_key
     pull: true
     settings:
-      backend: "filesystem"
       rebuild: true
       cache_key: "wolfpackmaker"
       archive_format: "gzip"
