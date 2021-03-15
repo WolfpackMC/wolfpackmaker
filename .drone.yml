@@ -10,6 +10,7 @@ steps:
         from_secret: aws_access_key_id
       AWS_SECRET_ACCESS_KEY:
         from_secret: aws_secret_access_key
+      PLUGIN_PATH_STYLE: true
     pull: true
     settings:
       restore: true
@@ -36,6 +37,7 @@ steps:
         from_secret: aws_access_key_id
       AWS_SECRET_ACCESS_KEY:
         from_secret: aws_secret_access_key
+      PLUGIN_PATH_STYLE: true
     pull: true
     settings:
       rebuild: true
