@@ -26,7 +26,7 @@ steps:
     image: python:latest
     pull: true
     commands:
-      - sudo apt update && sudo apt install zip
+      - apt update && apt install zip
       - pip install virtualenv
       - virtualenv wolfpackmaker_build
       - export VIRTUAL_ENV=/drone/src/wolfpackmaker_build
