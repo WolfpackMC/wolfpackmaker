@@ -11,7 +11,7 @@ steps:
       AWS_SECRET_ACCESS_KEY:
         from_secret: aws_secret_access_key
       PLUGIN_PATH_STYLE: true
-      PLUGIN_BUCKET: "wolfpackmaker"
+      PLUGIN_BUCKET: "drone"
       PLUGIN_ENDPOINT: http://10.200.0.16:9000
       PLUGIN_REGION: 'default'
     pull: true
@@ -41,7 +41,7 @@ steps:
       AWS_SECRET_ACCESS_KEY:
         from_secret: aws_secret_access_key
       PLUGIN_PATH_STYLE: true
-      PLUGIN_BUCKET: "wolfpackmaker"
+      PLUGIN_BUCKET: "drone"
       PLUGIN_ENDPOINT: http://10.200.0.16:9000
       PLUGIN_REGION: 'default'
     pull: true
