@@ -12,7 +12,7 @@ steps:
         from_secret: aws_secret_access_key
       PLUGIN_PATH_STYLE: true
       PLUGIN_BUCKET: "wolfpackmaker"
-      PLUGIN_ENDPOINT: http://10.200.0.16:9199
+      PLUGIN_ENDPOINT: http://10.200.0.16:9000
       PLUGIN_REGION: 'default'
     pull: true
     settings:
@@ -42,7 +42,7 @@ steps:
         from_secret: aws_secret_access_key
       PLUGIN_PATH_STYLE: true
       PLUGIN_BUCKET: "wolfpackmaker"
-      PLUGIN_ENDPOINT: http://10.200.0.16:9199
+      PLUGIN_ENDPOINT: http://10.200.0.16:9000
       PLUGIN_REGION: 'default'
     pull: true
     settings:
