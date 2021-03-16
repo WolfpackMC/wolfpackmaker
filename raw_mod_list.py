@@ -103,7 +103,9 @@ def main():
             "summary": json_response.get("summary"),
             "website_url": json_response.get("website_url"),
             "logo": get_logo(json_response.get("attachments", {})),
-            "slug": json_response.get("slug")
+            "slug": json_response.get("slug"),
+            "author": json_response.get("authors")[0].get("name"),
+            "author_url": json_response.get("authors")[0].get("url")
         }
         data.append(clean_data)
 
