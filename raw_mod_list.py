@@ -9,7 +9,7 @@ import sys
 
 from os import path
 
-author = "kalka"
+author = "Wolfpack"
 repo = sys.argv[1] or ""
 
 curseforge_url = "https://addons-ecs.forgesvc.net/api/v2/addon/"

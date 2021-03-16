@@ -28,7 +28,7 @@ def logger_install():
 logger_install()
 
 
-user = "kalka"
+user = "Wolfpack"
 repo = sys.argv[1] or ""  # format: https://git.kalka.io/kalka/gilneas
 gitea_api = "https://git.kalka.io/api/v1/repos/{}/{}/releases"
 
