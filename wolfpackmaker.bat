@@ -4,9 +4,9 @@ set "thisDir=%~dp0"
 
 setlocal enableDelayedExpansion
 REM Setup initial vars
-set "script_name=wolfpackmaker\wolfpackmaker.py"
+set "script_name="
 set /a tried=0
-set "toask=yes"
+set "toask=no"
 set "pause_on_error=yes"
 set "py2v="
 set "py2path="
@@ -133,7 +133,11 @@ if not "!pypath!" == "" (
     goto runscript
 )
 if !tried! lss 1 (
-    goto install.py
+    if /i "!toask!"=="yes" (
+        REM Better ask permission first
+        goto askinstall
+    ) else (
+        goto installpy
     )
 ) else (
     cls
@@ -305,8 +309,8 @@ REM Python found
 cls
 set "args=%*"
 set "args=!args:"=!"
-"!pypath!" "pip install -r requirements.txt"
-"!pypath!" "pip install https://git.kalka.io/kalka/packmaker/archive/wolfpackmaker.zip"
+!pypath! -m pip install -r requirements.txt
+!pypath! -m pip install https://git.kalka.io/kalka/packmaker/archive/wolfpackmaker.zip
 if "!args!"=="" (
     "!pypath!" "!thisDir!!script_name!"
 ) else (

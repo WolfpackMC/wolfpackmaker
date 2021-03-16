@@ -16,11 +16,22 @@ curseforge_url = "https://addons-ecs.forgesvc.net/api/v2/addon/"
 gitea_url = "https://git.kalka.io/api/v1/repos/{}/{}/releases"
 mod_list = []
 
-coloredlogs.install(
-    format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
-    level=logging.DEBUG,
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
+
+def logger_install():
+    platform = sys.platform
+    if platform == 'linux' or platform == 'linux2' or platform == 'darwin':
+        logging.basicConfig(
+            format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
+            level=logging.DEBUG,
+            datefmt='%Y-%m-%d %H:%M:%S')
+    else:
+        coloredlogs.install(
+            format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
+            level=logging.DEBUG,
+            datefmt='%Y-%m-%d %H:%M:%S')
+
+
+logger_install()
 
 
 async def fetch(session, url):
