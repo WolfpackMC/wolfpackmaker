@@ -4,10 +4,10 @@ import logging
 import time
 import json
 import urllib3
-import coloredlogs
 import sys
 
 from os import path
+from rich.logging import RichHandler
 
 author = "Wolfpack"
 repo = sys.argv[1] or ""
@@ -18,17 +18,11 @@ mod_list = []
 
 
 def logger_install():
-    platform = sys.platform
-    if platform == 'linux' or platform == 'linux2' or platform == 'darwin':
-        logging.basicConfig(
-            format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
-            level=logging.DEBUG,
-            datefmt='%Y-%m-%d %H:%M:%S')
-    else:
-        coloredlogs.install(
-            format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
-            level=logging.DEBUG,
-            datefmt='%Y-%m-%d %H:%M:%S')
+    logging.basicConfig(
+        format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
+        level=logging.DEBUG,
+        datefmt='%Y-%m-%d %H:%M:%S',
+        handlers=RichHandler())
 
 
 logger_install()

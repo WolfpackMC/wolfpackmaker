@@ -1,28 +1,33 @@
 import json
 import logging
-import coloredlogs
 import os
 import sys
 
 from zipfile import ZipFile
 from datetime import datetime
+from rich.logging import RichHandler
 
 import urllib3
 from packmaker.main import main as packmaker_main
 
 
 def logger_install():
-    platform = sys.platform
-    if platform == 'linux' or platform == 'linux2' or platform == 'darwin':
-        coloredlogs.install(
-            format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
-            level=logging.DEBUG,
-            datefmt='%Y-%m-%d %H:%M:%S')
-    else:
-        logging.basicConfig(
-            format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
-            level=logging.DEBUG,
-            datefmt='%Y-%m-%d %H:%M:%S')
+    logging.basicConfig(
+        format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
+        level=logging.DEBUG,
+        datefmt='%Y-%m-%d %H:%M:%S',
+        handlers=[RichHandler()])
+    # platform = sys.platform
+    # if platform == 'linux' or platform == 'linux2' or platform == 'darwin':
+    #     coloredlogs.install(
+    #         format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
+    #         level=logging.DEBUG,
+    #         datefmt='%Y-%m-%d %H:%M:%S')
+    # else:
+    #     logging.basicConfig(
+    #         format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
+    #         level=logging.DEBUG,
+    #         datefmt='%Y-%m-%d %H:%M:%S')
 
 
 logger_install()
