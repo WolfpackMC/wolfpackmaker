@@ -22,7 +22,7 @@ def logger_install():
         format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
         level=logging.DEBUG,
         datefmt='%Y-%m-%d %H:%M:%S',
-        handlers=RichHandler())
+        handlers=[RichHandler()])
 
 
 logger_install()
