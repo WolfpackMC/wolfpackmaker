@@ -14,12 +14,12 @@ from packmaker.main import main as packmaker_main
 def logger_install():
     platform = sys.platform
     if platform == 'linux' or platform == 'linux2' or platform == 'darwin':
-        logging.basicConfig(
+        coloredlogs.install(
             format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
             level=logging.DEBUG,
             datefmt='%Y-%m-%d %H:%M:%S')
     else:
-        coloredlogs.install(
+        logging.basicConfig(
             format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
             level=logging.DEBUG,
             datefmt='%Y-%m-%d %H:%M:%S')
