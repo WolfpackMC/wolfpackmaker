@@ -5,7 +5,6 @@ import sys
 
 from zipfile import ZipFile
 from datetime import datetime
-from rich.logging import RichHandler
 
 import urllib3
 from packmaker.main import main as packmaker_main
@@ -15,8 +14,7 @@ def logger_install():
     logging.basicConfig(
         format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
         level=logging.DEBUG,
-        datefmt='%Y-%m-%d %H:%M:%S',
-        handlers=[RichHandler()])
+        datefmt='%Y-%m-%d %H:%M:%S')
     # platform = sys.platform
     # if platform == 'linux' or platform == 'linux2' or platform == 'darwin':
     #     coloredlogs.install(
