@@ -309,8 +309,7 @@ REM Python found
 cls
 set "args=%*"
 set "args=!args:"=!"
-!pypath! -m pip install urllib3
-!pypath! -m pip install https://git.kalka.io/kalka/packmaker/archive/wolfpackmaker.zip
+"!pypath!" "-m" "pip" "install" "https://git.kalka.io/kalka/packmaker/archive/wolfpackmaker.zip"
 if "!args!"=="" (
     "!pypath!" "!thisDir!!script_name!"
 ) else (
