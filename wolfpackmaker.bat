@@ -309,7 +309,9 @@ REM Python found
 cls
 set "args=%*"
 set "args=!args:"=!"
-"!pypath!" "-m" "pip" "install" "https://git.kalka.io/kalka/packmaker/archive/wolfpackmaker.zip"
+"!pypath!" "-m" "ensurepip"
+"!pypath!" "-m" "pip" "install" "-r" "!thisDir!\requirements.txt"
+cls
 if "!args!"=="" (
     "!pypath!" "!thisDir!!script_name!"
 ) else (
