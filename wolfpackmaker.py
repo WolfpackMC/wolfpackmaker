@@ -177,21 +177,19 @@ async def get_client_mods():
                 completed = (-len(to_process) + len(tasks)) + 1
                 progress.update(download_progress,
                                 description="Downloading: {}... {}/{} - ({})".format(filename,
-                                                                                    completed,
-                                                                                    len(tasks), random_message))
+                                                                                     completed,
+                                                                                     len(tasks), random_message))
                 data, filename = await coro
+                mod_file = io.BytesIO(data)
                 with open(join(mods_cache_dir, filename), 'wb') as f:
                     progress.update(download_progress,
+                                    advance=1,
                                     description="Saving: {}... {}/{} - ({})".format(filename,
-                                                                                completed,
-                                                                                len(tasks), random_message))
-                    f.write(data)
+                                                                                    completed,
+                                                                                    len(tasks), random_message))
+                    f.write(mod_file.read())
                     to_process.remove(filename)
-                    progress.update(download_progress, advance=1,
-                    description="Copying {} to mods folder... {}/{} - ({})".format(filename,
-                                                                                completed,
-                                                                                len(tasks), random_message))
-                    shutil.copy(join(mods_cache_dir, filename), join(mods_dir, filename))
+                shutil.copy(join(mods_cache_dir, filename), join(mods_dir, filename))
     else:
         log.debug("We do not have any mods to process.")
     await session.close()
