@@ -1,6 +1,7 @@
 modlist.db
 packmaker.lock
 .minecraft
+wolfpackmaker_build
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
