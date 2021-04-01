@@ -47,8 +47,8 @@ async def fetch_async(loop, mods):
     tasks = []
     # try to use one client session
     async with aiohttp.ClientSession() as session:
-        for k in mods["resolutions"].keys():
-            project_id = mods["resolutions"][k]["projectId"]
+        for m in mods:
+            project_id = m.get("id")
             if project_id is not None:
                 task = asyncio.ensure_future(fetch(session, curseforge_url + str(project_id)))
                 tasks.append(task)
@@ -59,7 +59,7 @@ async def fetch_async(loop, mods):
 
 def get_gitea_data():  # single threaded, not needed to be intensive
     if path.exists('manifest.lock'):
-        logging.info("Found local packmaker.lock. Using that instead.")
+        logging.info("Found local manifest.lock. Using that instead.")
         with open('manifest.lock', 'r') as f:
             mod_data_json = json.loads(f.read())
         logging.info("Done.")

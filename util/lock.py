@@ -142,7 +142,13 @@ async def process_modpack_config():
                 custom_url = v.get("url")
                 if custom_url is not None:
                     log.info("Using custom URL {} for mod {}".format(k, custom_url))
+                    for m in curseforge_data: # Double-check if the custom URL exists in curseforge DB (It's messy, I know)
+                        if k == m.get("slug"):
+                            found_id = m.get("id")
+                            found_name = m.get("name")
                     found_mods.append({
+                        "id": found_id,
+                        "name": found_name,
                         "slug": k,
                         "filename": basename(custom_url),
                         "downloadUrl": custom_url,
