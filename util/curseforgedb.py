@@ -1,8 +1,8 @@
+import aiohttp
 import asyncio
 import json
 import logging
 
-import aiohttp
 from pyfiglet import Figlet
 from rich.logging import RichHandler
 from rich.traceback import install as init_traceback

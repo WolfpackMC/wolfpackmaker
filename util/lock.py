@@ -1,15 +1,15 @@
-import asyncio
-import json
-import sys
-
 import aiohttp
+import asyncio
+import datetime
+import json
+import logging
+import sys
+import yaml
+
 from os.path import basename
 from rich.logging import RichHandler
 from rich.traceback import install as init_traceback
 from pyfiglet import Figlet
-import yaml
-import logging
-import datetime
 
 # noinspection PyArgumentList
 logging.basicConfig(
@@ -186,7 +186,7 @@ async def process_modpack_config():
                     serveronly = False
                     custom_url = None
                 if not custom_url:
-                    log.info("{} was not found".format(k))
+                    log.critical("{} was not found".format(k))
     await asyncio.gather(*tasks)
     await session.close()
 

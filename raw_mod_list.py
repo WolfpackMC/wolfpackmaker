@@ -58,9 +58,9 @@ async def fetch_async(loop, mods):
 
 
 def get_gitea_data():  # single threaded, not needed to be intensive
-    if path.exists('packmaker.lock'):
+    if path.exists('manifest.lock'):
         logging.info("Found local packmaker.lock. Using that instead.")
-        with open('packmaker.lock', 'r') as f:
+        with open('manifest.lock', 'r') as f:
             mod_data_json = json.loads(f.read())
         logging.info("Done.")
     else:

@@ -1,5 +1,5 @@
 # wolfpackmaker
 
-A set up of Python 3 helper scripts to build Wolfpack modpacks with the help of Mark Crewson's [Packmaker](https://gitlab.com/routhio/minecraft/tools/packmaker) tool.
+A set up of Python 3 helper scripts to build Wolfpack modpacks.
 
-.
+To learn more, visit https://woofmc.xyz
