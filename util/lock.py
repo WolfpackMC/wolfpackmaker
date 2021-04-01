@@ -32,9 +32,6 @@ async def sort_files(files, mod, modpack_manifest):
     filtered_file_data = []
     found = False
     acceptable_versions = [modpack_manifest.get("version")]
-    if modpack_manifest.get("version") == "1.16.5":
-        for i in range(1, 5):
-            acceptable_versions.append("1.16.{}".format(i))
     for f in files:
         if modpack_manifest.get("modloader") == 'Forge' and 'Fabric' in f.get("gameVersion"):
             continue
