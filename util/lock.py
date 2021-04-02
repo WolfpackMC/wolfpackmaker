@@ -189,14 +189,18 @@ async def process_modpack_config():
                         if k == m.get("slug"):
                             found_id = m.get("id")
                             found_name = m.get("name")
+                        else:
+                            found_id = None
+                            found_name = k
                     found_mods.append({
-                        "id": found_id,
-                        "name": found_name,
+                        "id": found_id or None,
+                        "name": found_name or k,
                         "slug": k,
                         "filename": basename(custom_url),
                         "downloadUrl": custom_url,
                         "clientonly": clientonly,
-                        "serveronly": serveronly
+                        "serveronly": serveronly,
+                        "custom": True
                     })
                     break
             for m in curseforge_data:

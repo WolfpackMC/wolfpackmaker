@@ -1,0 +1,11 @@
+modloader: Forge
+version: 1.16.5
+mods:
+- jei:
+- journeymap:
+- thermal-foundation:
+- craftpresence:
+- mekanism:
+- kubejs-blood-magic:
+- astral-sorcery:
+- botania:

@@ -20,36 +20,20 @@ steps:
       cache_key: "wolfpackmaker"
       archive_format: "gzip"
       mount:
-        - 'wolfpackmaker_build'
-  
-  - name: build
+        - 'wolfpackmaker_tests'
+  - name: test
     image: python:latest
     pull: true
     commands:
-      - apt update && apt install zip
       - pip install virtualenv
-      - virtualenv wolfpackmaker_build
-      - export VIRTUAL_ENV=/drone/src/wolfpackmaker_build
+      - python -m virtualenv wolfpackmaker_tests
+      - export VIRTUAL_ENV=/drone/src/wolfpackmaker_tests
       - export PATH="$VIRTUAL_ENV/bin:$PATH"
       - echo $PATH
       - pip install -r requirements.txt
-      - pip install git+https://git.kalka.io/kalka/packmaker.git
-      - pyinstaller wolfpackmaker.py -y
-      - zip -r wolfpackmaker.zip dist
-
-  - name: upload
-    image: plugins/gitea-release
-    settings:
-      api_key:
-        from_secret: api_key
-      base_url: https://git.kalka.io
-      title: ${DRONE_TAG}
-      note: ${DRONE_COMMIT_MESSAGE}
-      files:
-        - wolfpackmaker.zip
-    when:
-      event: tag
-
+      - python util/curseforgedb.py
+      - python util/lock.py -m tests/manifest-fabric.yml
+      - python util/lock.py -m tests/manifest-forge.yml
   - name: rebuild-cache
     image: meltwater/drone-cache:dev
     environment:
@@ -68,4 +52,4 @@ steps:
       archive_format: "gzip"
       # filesystem_cache_root: "/tmp/cache"
       mount:
-        - 'wolfpackmaker_build'
+        - 'wolfpackmaker_tests'
