@@ -95,6 +95,19 @@ async def fetch_mod(curseforge_url, mod_id, session):
     return mod
 
 
+
+async def search_mod(curseforge_url, mod_slug, session):
+    search_url = curseforge_url + 'search?gameId=432&sectionId=6&searchfilter={}'.format(mod_slug)
+    async with session.get(search_url) as r:
+        mods = await r.json()
+    for m in mods:
+        if m.get("slug") == mod_slug:
+            log.info("Found {} as {} via CurseForge API! [{}] [{}]".format(mod_slug, m.get("slug"), m.get("name"), m.get("id")))
+            return m
+        else:
+            continue
+
+
 async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest):
     files = await fetch_files(curseforge_url, mod, session)
     # log.debug("Checking for dependencies...")
@@ -128,7 +141,7 @@ async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest):
 
 async def process_modpack_config():
     curseforge_url = 'https://addons-ecs.forgesvc.net/api/v2/addon/'
-    with open('test.yml', 'r') as f:
+    with open('manifest.yml', 'r') as f:
         modpack_manifest = yaml.load(f.read(), Loader=yaml.SafeLoader)
     with open('curseforge.db', 'r') as f:
         curseforge_data = json.loads(f.read())
@@ -189,7 +202,9 @@ async def process_modpack_config():
                     serveronly = False
                     custom_url = None
                 if not custom_url:
-                    log.critical("{} was not found".format(k))
+                    log.critical("{} was not found, looking manually...".format(k))
+                    mod_found = await search_mod(curseforge_url, k, session)
+                    task = asyncio.create_task(fetch_mod_data(curseforge_url, mod_found, session, modpack_manifest))
     await asyncio.gather(*tasks)
     await session.close()
 
