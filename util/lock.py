@@ -1,4 +1,5 @@
 import aiohttp
+import argparse
 import asyncio
 import datetime
 import json
@@ -27,6 +28,26 @@ def fancy_intro():
     log.info(f)
     log.info(str('').join(['####' for _ in range(16)]))
 
+
+def parse_args(parser):
+    args = parser.parse_args()
+    return args
+
+
+def init_args():
+    parser = argparse.ArgumentParser(
+        description='Wolfpackmaker (lock.py) (https://woofmc.xyz)'
+    )
+    parser.add_argument('-v', '--verbose', help='Increase output verbosity.', action='store_true')
+    parser.add_argument('-m', '--manifest', help='Optional location for the manifest e.g /opt/manifests/manifest.yml.'
+                                                 '\nDefaults to workdir (manifest.yml)')
+    parser.add_argument('-nomod', '--nomodleftbehind', help='Enacts the No Mod Left Behind Act. Finds all missing mods'
+                                                            '\nusing CurseForge API if said mod is not found in the CurseForge DB.'
+                                                            '\nDefaults to true', default=True)
+    return parser
+
+parser = init_args()
+args = parse_args(parser)
 
 async def sort_files(files, mod, modpack_manifest):
     filtered_file_data = []
@@ -141,7 +162,16 @@ async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest):
 
 async def process_modpack_config():
     curseforge_url = 'https://addons-ecs.forgesvc.net/api/v2/addon/'
-    with open('manifest.yml', 'r') as f:
+    try:
+        open(args.manifest)
+    except TypeError:
+        pass
+    except FileNotFoundError:
+        log.critical('{} was not found. Make sure the directory is correct.'.format(args.manifest))
+        log.info("Defaulting to manifest.yml. Waiting 3 seconds...")
+        await asyncio.sleep(3)
+        args.manifest = 'manifest.yml'
+    with open(args.manifest or 'manifest.yml', 'r') as f:
         modpack_manifest = yaml.load(f.read(), Loader=yaml.SafeLoader)
     with open('curseforge.db', 'r') as f:
         curseforge_data = json.loads(f.read())
@@ -202,9 +232,10 @@ async def process_modpack_config():
                     serveronly = False
                     custom_url = None
                 if not custom_url:
-                    log.critical("{} was not found, looking manually...".format(k))
-                    mod_found = await search_mod(curseforge_url, k, session)
-                    task = asyncio.create_task(fetch_mod_data(curseforge_url, mod_found, session, modpack_manifest))
+                    log.critical("{} was not found{}".format(k, '.' if not args.nomodleftbehind else ', looking manually...'))
+                    if args.nomodleftbehind:
+                        mod_found = await search_mod(curseforge_url, k, session)
+                        task = asyncio.create_task(fetch_mod_data(curseforge_url, mod_found, session, modpack_manifest))
     await asyncio.gather(*tasks)
     await session.close()
 

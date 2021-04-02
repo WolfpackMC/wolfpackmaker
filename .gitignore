@@ -2,6 +2,8 @@ modlist.db
 manifest.lock
 .minecraft
 wolfpackmaker_build
+curseforge.db
+manifest.yml
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
