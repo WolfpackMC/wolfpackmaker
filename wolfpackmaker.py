@@ -114,7 +114,7 @@ async def get_gitea_data(session):
 
 def process_lockfile(lockfile, clientonly=False, serveronly=False):
     mods = []
-    for mod in lockfile.values():
+    for mod in lockfile:
         if clientonly and not mod.get("serveronly"):
             mods.append(mod)
         elif serveronly and not mod.get("clientonly"):
