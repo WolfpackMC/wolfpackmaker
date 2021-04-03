@@ -205,6 +205,8 @@ async def process_modpack_config():
                                 found_id = None
                                 found_name = k
                                 found_slug = k
+                            clientonly = False
+                            serveronly = False
                             if v.get("clientonly"):
                                 clientonly = True
                             if v.get("serveronly"):
