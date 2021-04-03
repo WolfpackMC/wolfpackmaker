@@ -213,7 +213,10 @@ async def process_modpack_config():
                         })
                         break
             for m in curseforge_data:
-                custom_url = v.get("url")
+                try:
+                    custom_url = v.get("url")
+                except AttributeError:
+                    custom_url = None
                 if k == m.get("slug") and custom_url is None:
                     log.info("Resolved {} as {} in the local database! [{}] [{}]".format(k,
                                                                                          m.get("slug"),
