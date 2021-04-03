@@ -211,8 +211,8 @@ async def process_modpack_config():
                             "id": found_id or None,
                             "name": found_name or k,
                             "slug": k,
-                            "filename": basename(custom_url),
-                            "downloadUrl": custom_url,
+                            "filename": basename(v.get("url")),
+                            "downloadUrl": v.get("url"),
                             "clientonly": clientonly,
                             "serveronly": serveronly,
                             "custom": True
