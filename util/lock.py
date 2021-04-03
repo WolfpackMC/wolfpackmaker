@@ -263,6 +263,7 @@ async def process_modpack_config():
                     if args.nomodleftbehind:
                         mod_found = await search_mod(curseforge_url, k, session)
                         task = asyncio.create_task(fetch_mod_data(curseforge_url, mod_found, session, modpack_manifest))
+                        tasks.append(task)
     await asyncio.gather(*tasks)
     await session.close()
 
