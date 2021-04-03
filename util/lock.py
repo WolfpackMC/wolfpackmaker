@@ -163,7 +163,7 @@ async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest):
                 # log.debug(dependency_file)
     for m in found_mods:
         if m.get("slug") == mod.get("slug"):
-            # log.debug("Adding {} to the manifest from mod {}".format(filtered_file.get("downloadUrl"), mod.get("name")))
+            log.debug("Adding {} to the manifest from mod {}".format(filtered_file.get("downloadUrl"), mod.get("name")))
             m.update({"downloadUrl": filtered_file.get("downloadUrl"), "filename": filtered_file.get("fileName")})
 
 
@@ -259,9 +259,16 @@ async def process_modpack_config():
                     serveronly = False
                     custom_url = None
                 if not custom_url:
-                    log.critical("{} was not found{}".format(k, '.' if not args.nomodleftbehind else ', looking manually...'))
                     if args.nomodleftbehind:
+                        log.critical("{} was not found{}".format(k, '.' if not args.nomodleftbehind else ', looking manually...'))
                         mod_found = await search_mod(curseforge_url, k, session)
+                        found_mods.append({
+                            "id": mod_found.get("id"),
+                            "slug": mod_found.get("slug"),
+                            "name": mod_found.get("name"),
+                            "clientonly": clientonly,
+                            "serveronly": serveronly
+                        })
                         task = asyncio.create_task(fetch_mod_data(curseforge_url, mod_found, session, modpack_manifest))
                         tasks.append(task)
     await asyncio.gather(*tasks)
@@ -282,6 +289,8 @@ def main():
     loop.run_until_complete(task)
     save_lockfile()
     for m in found_mods:
+        if m.get("slug") == 'fastworkbench-minus-replacement':
+            print('found')
         if m.get("downloadUrl") is None:
             log.critical(m.get("slug") + ' was not found')
 
