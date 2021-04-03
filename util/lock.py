@@ -135,34 +135,34 @@ async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest):
     filtered_file = await sort_files(files, mod, modpack_manifest)
     for dependencies in filtered_file.get("dependencies"):
         if dependencies.get("type") == 3:
-            if dependencies.get("addonId") in (m.get("id") for m in found_mods):
-                # log.debug("Dependency already found")
+            dependency_mod = await fetch_mod(curseforge_url, dependencies.get("addonId"), session)
+            manifest_mods = [list(mod.keys()) for mod in modpack_manifest.get("mods")]
+            found = False
+            for m in manifest_mods:
+                if dependency_mod.get("slug") == str().join(m):
+                    log.warning("{} already found! Skipping.".format(dependency_mod.get("slug")))
+                    found = True
+            if found:
                 continue
-            else:
-                dependency_mod = await fetch_mod(curseforge_url, dependencies.get("addonId"), session)
-                log.debug(
-                    "Resolving dependency: {} ({}) for mod {}".format(
-                        dependency_mod.get("slug"),
-                        dependency_mod.get("name"),
-                        mod.get("slug")
-                    ))
-                # double check to make sure we don't have a duplicate
-                for mod in modpack_manifest.get("mods"):
-                    for k, _ in mod.items():
-                        if k in dependency_mod.get("slug"):
-                            log.warning("Dependency {} already found! Skipping.".format(dependency_mod.get("slug")))
-                            continue
-                dependency_file = await sort_files(
-                    await fetch_files(curseforge_url, dependency_mod, session), dependency_mod, modpack_manifest)
-                found_mods.append({
-                    "id": dependency_mod.get("id"),
-                    "slug": dependency_mod.get("slug"),
-                    "name": dependency_mod.get("name"),
-                    "downloadUrl": dependency_file.get("downloadUrl"),
-                    "filename": dependency_file.get("fileName")})
+            log.debug(
+                "Resolving dependency: {} ({}) for mod {}".format(
+                    dependency_mod.get("slug"),
+                    dependency_mod.get("name"),
+                    mod.get("slug")
+                ))
+            # double check to make sure we don't have a duplicate
+            dependency_file = await sort_files(
+                await fetch_files(curseforge_url, dependency_mod, session), dependency_mod, modpack_manifest)
+            found_mods.append({
+                "id": dependency_mod.get("id"),
+                "slug": dependency_mod.get("slug"),
+                "name": dependency_mod.get("name"),
+                "downloadUrl": dependency_file.get("downloadUrl"),
+                "filename": dependency_file.get("fileName")})
                 # log.debug(dependency_file)
     for m in found_mods:
-        if m.get("id") == mod.get("id"):
+        if m.get("slug") == mod.get("slug"):
+            # log.debug("Adding {} to the manifest from mod {}".format(filtered_file.get("downloadUrl"), mod.get("name")))
             m.update({"downloadUrl": filtered_file.get("downloadUrl"), "filename": filtered_file.get("fileName")})
 
 
@@ -279,6 +279,9 @@ def main():
     task = loop.create_task(process_modpack_config())
     loop.run_until_complete(task)
     save_lockfile()
+    for m in found_mods:
+        if m.get("downloadUrl") is None:
+            log.critical(m.get("slug") + ' was not found')
 
 
 if __name__ == '__main__':
