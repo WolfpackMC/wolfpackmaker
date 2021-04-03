@@ -182,7 +182,10 @@ async def process_modpack_config():
         for k, v in mods[idx].items():
             found = False
             if v is not None:
-                custom_url = v.get("url")
+                try:
+                    custom_url = v.get("url")
+                except AttributeError:
+                    custom_url = None
                 if custom_url is not None:
                     log.info("Using custom URL {} for mod {}".format(k, custom_url))
                     for m in curseforge_data:  # Double-check if the custom URL exists in curseforge DB
