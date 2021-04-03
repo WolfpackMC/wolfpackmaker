@@ -197,28 +197,28 @@ async def process_modpack_config():
                     for m in curseforge_data:
                         # Double-check if the custom URL exists in curseforge DB, but DON'T push download data
                         if k == m.get("slug"):
-                            found_id = m.get("id")
-                            found_name = m.get("name")
-                        else:
-                            found_id = None
-                            found_name = k
-                        clientonly = False
-                        serveronly = False
-                        if v.get("clientonly"):
-                            clientonly = True
-                        if v.get("serveronly"):
-                            serveronly = True
-                        found_mods.append({
-                            "id": found_id or None,
-                            "name": found_name or k,
-                            "slug": k,
-                            "filename": basename(v.get("url")),
-                            "downloadUrl": v.get("url"),
-                            "clientonly": clientonly,
-                            "serveronly": serveronly,
-                            "custom": True
-                        })
-                        break
+                            try:
+                                found_id = m.get("id")
+                                found_name = m.get("name")
+                                found_slug = m.get("slug")
+                            except AttributeError:
+                                found_id = None
+                                found_name = k
+                                found_slug = k
+                            if v.get("clientonly"):
+                                clientonly = True
+                            if v.get("serveronly"):
+                                serveronly = True
+                            found_mods.append({
+                                "id": found_id or None,
+                                "name": found_name or k,
+                                "slug": k,
+                                "filename": basename(v.get("url")),
+                                "downloadUrl": v.get("url"),
+                                "clientonly": clientonly,
+                                "serveronly": serveronly,
+                                "custom": True
+                            })
             for m in curseforge_data:
                 try:
                     custom_url = v.get("url")
