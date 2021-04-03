@@ -43,6 +43,8 @@ def init_args():
     parser.add_argument('-v', '--verbose', help='Increase output verbosity.', action='store_true')
     parser.add_argument('-r', '--repo', help='Wolfpack modpack repository from https://git.kalka.io e.g'
                                              '--repo Odin, from https://git.kalka.io/Wolfpack/Odin', required=True)
+    parser.add_argument('-c', '--clientonly', help='Enable clientonly.', default=True)
+    parser.add_argument('-s', '--serveronly', help='Enable serveronly.', default=False)
     return parser
 
 
@@ -217,7 +219,7 @@ def main():
     loop = asyncio.get_event_loop()
     # TODO: Server support, this is the Oil Ocean Zone of Wolfpackmaker :^)
     try:
-        loop.run_until_complete(get_mods(clientonly=True))  # The todo is for this purpose
+        loop.run_until_complete(get_mods(clientonly=args.clientonly, serveronly=args.serveronly))  # The todo is for this purpose
     except KeyboardInterrupt or InterruptedError:
         for mod in to_process:
             if exists(join(mods_dir, mod)):
