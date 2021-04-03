@@ -13,6 +13,7 @@ from os.path import dirname, abspath, exists, join
 from os import remove
 from pathlib import Path
 from pyfiglet import Figlet
+from rich.traceback import install as init_traceback
 from rich.logging import RichHandler
 from rich.progress import Progress
 
@@ -223,6 +224,7 @@ def assemble_logger(verbosity):
 
 
 def main():
+    init_traceback()
     assemble_logger(args.verbose)
     fancy_intro()
     loop = asyncio.get_event_loop()
