@@ -194,7 +194,8 @@ async def process_modpack_config():
                     custom_url = None
                 if custom_url is not None:
                     log.info("Using custom URL {} for mod {}".format(k, custom_url))
-                    for m in curseforge_data:  # Double-check if the custom URL exists in curseforge DB
+                    for m in curseforge_data:
+                        # Double-check if the custom URL exists in curseforge DB, but DON'T push download data
                         if k == m.get("slug"):
                             found_id = m.get("id")
                             found_name = m.get("name")
