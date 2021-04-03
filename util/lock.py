@@ -139,9 +139,10 @@ async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest):
             manifest_mods = [list(mod.keys()) for mod in modpack_manifest.get("mods")]
             found = False
             for m in manifest_mods:
-                if dependency_mod.get("slug") == str().join(m):
+                if dependency_mod.get("slug") == str().join(m) or dependency_mod.get("slug") in [mod.get("slug") for mod in found_mods]:
                     log.warning("{} already found! Skipping.".format(dependency_mod.get("slug")))
                     found = True
+                    break
             if found:
                 continue
             log.debug(
