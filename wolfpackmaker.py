@@ -142,23 +142,24 @@ async def get_client_mods():
     mods = json.loads(assets_list.get('manifest.lock'))
     import shutil
     for m in mods:
-        filename = m.get("name")
-        if filename not in cached_mod_ids:
-            if exists(join(mods_dir, filename)):
-                log.debug("Flagging {} for update...".format(filename))
-                try:
-                    remove(join(mods_dir, filename))
-                except FileNotFoundError:
-                    log.debug("{} not found, skipping anyway".format(filename))
-        if not exists(join(mods_dir, filename)) or not exists(join(mods_cache_dir, filename)):  # if it does not exist in the folder
-            if exists(join(mods_cache_dir, filename)):
-                log.debug("Using cached {} from {}".format(filename, mods_cache_dir))
-                shutil.copy(join(mods_cache_dir, filename), join(mods_dir, filename))
-            else:
-                download_url = m.get("downloadUrl")
-                task = asyncio.ensure_future(save_mod(filename, download_url, session))
-                to_process.append(filename)
-                tasks.append(task)
+        if m.get("clientonly"):
+            filename = m.get("filename")
+            if filename not in cached_mod_ids:
+                if exists(join(mods_dir, filename)):
+                    log.debug("Flagging {} for update...".format(filename))
+                    try:
+                        remove(join(mods_dir, filename))
+                    except FileNotFoundError:
+                        log.debug("{} not found, skipping anyway".format(filename))
+            if not exists(join(mods_dir, filename)) or not exists(join(mods_cache_dir, filename)):  # if it does not exist in the folder
+                if exists(join(mods_cache_dir, filename)):
+                    log.debug("Using cached {} from {}".format(filename, mods_cache_dir))
+                    shutil.copy(join(mods_cache_dir, filename), join(mods_dir, filename))
+                else:
+                    download_url = m.get("downloadUrl")
+                    task = asyncio.ensure_future(save_mod(filename, download_url, session))
+                    to_process.append(filename)
+                    tasks.append(task)
     if tasks:
         with Progress() as progress:
             keywords = [
