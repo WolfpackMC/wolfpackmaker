@@ -52,7 +52,7 @@ args = parse_args(parser)
 user = "Wolfpack"
 repo = args.repo
 gitea_api = "https://git.kalka.io/api/v1/repos/{}/{}/releases"
-gitea_files = ['packmaker.lock', 'config.zip']
+gitea_files = ['manifest.lock', 'config.zip']
 
 
 def fancy_intro():
