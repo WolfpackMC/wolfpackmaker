@@ -146,6 +146,12 @@ async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest):
                         dependency_mod.get("name"),
                         mod.get("slug")
                     ))
+                # double check to make sure we don't have a duplicate
+                for mod in modpack_manifest.get("mods"):
+                    for k, _ in mod.items():
+                        if k in dependency_mod.get("slug"):
+                            log.warning("Dependency {} already found! Skipping.".format(dependency_mod.get("slug")))
+                            continue
                 dependency_file = await sort_files(
                     await fetch_files(curseforge_url, dependency_mod, session), dependency_mod, modpack_manifest)
                 found_mods.append({
