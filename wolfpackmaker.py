@@ -139,10 +139,10 @@ async def get_client_mods():
     if exists(mods_cached):
         with open(mods_cached, 'r') as f:
             cached_mod_ids = json.loads(f.read())
-    mods = process_lockfile(json.loads(assets_list.get('manifest.lock')), clientonly=True)
+    mods = json.loads(assets_list.get('manifest.lock'))
     import shutil
     for m in mods:
-        filename = m.get("fileName")
+        filename = m.get("name")
         if filename not in cached_mod_ids:
             if exists(join(mods_dir, filename)):
                 log.debug("Flagging {} for update...".format(filename))
