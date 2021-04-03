@@ -185,24 +185,30 @@ async def process_modpack_config():
                 custom_url = v.get("url")
                 if custom_url is not None:
                     log.info("Using custom URL {} for mod {}".format(k, custom_url))
-                    for m in curseforge_data: # Double-check if the custom URL exists in curseforge DB (It's messy, I know)
+                    for m in curseforge_data:  # Double-check if the custom URL exists in curseforge DB
                         if k == m.get("slug"):
                             found_id = m.get("id")
                             found_name = m.get("name")
                         else:
                             found_id = None
                             found_name = k
-                    found_mods.append({
-                        "id": found_id or None,
-                        "name": found_name or k,
-                        "slug": k,
-                        "filename": basename(custom_url),
-                        "downloadUrl": custom_url,
-                        "clientonly": clientonly,
-                        "serveronly": serveronly,
-                        "custom": True
-                    })
-                    break
+                        clientonly = False
+                        serveronly = False
+                        if v.get("clientonly"):
+                            clientonly = True
+                        if v.get("serveronly"):
+                            serveronly = True
+                        found_mods.append({
+                            "id": found_id or None,
+                            "name": found_name or k,
+                            "slug": k,
+                            "filename": basename(custom_url),
+                            "downloadUrl": custom_url,
+                            "clientonly": clientonly,
+                            "serveronly": serveronly,
+                            "custom": True
+                        })
+                        break
             for m in curseforge_data:
                 if k == m.get("slug"):
                     log.info("Resolved {} as {} in the local database! [{}] [{}]".format(k,
