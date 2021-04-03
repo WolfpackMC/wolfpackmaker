@@ -114,7 +114,7 @@ async def get_gitea_data(session):
 
 def process_lockfile(lockfile, clientonly=False, serveronly=False):
     mods = []
-    for mod in lockfile.get("resolutions").values():
+    for mod in lockfile.values():
         if clientonly and not mod.get("serveronly"):
             mods.append(mod)
         elif serveronly and not mod.get("clientonly"):
@@ -139,7 +139,7 @@ async def get_client_mods():
     if exists(mods_cached):
         with open(mods_cached, 'r') as f:
             cached_mod_ids = json.loads(f.read())
-    mods = process_lockfile(json.loads(assets_list.get('packmaker.lock')), clientonly=True)
+    mods = process_lockfile(json.loads(assets_list.get('manifest.lock')), clientonly=True)
     import shutil
     for m in mods:
         filename = m.get("fileName")
