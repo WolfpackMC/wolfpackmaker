@@ -210,7 +210,7 @@ async def process_modpack_config():
                         })
                         break
             for m in curseforge_data:
-                if k == m.get("slug"):
+                if k == m.get("slug") and custom_url is None:
                     log.info("Resolved {} as {} in the local database! [{}] [{}]".format(k,
                                                                                          m.get("slug"),
                                                                                          m.get("name"),
