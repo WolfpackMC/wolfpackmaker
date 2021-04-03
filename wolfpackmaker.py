@@ -43,8 +43,8 @@ def init_args():
     parser.add_argument('-v', '--verbose', help='Increase output verbosity.', action='store_true')
     parser.add_argument('-r', '--repo', help='Wolfpack modpack repository from https://git.kalka.io e.g'
                                              '--repo Odin, from https://git.kalka.io/Wolfpack/Odin', required=True)
-    parser.add_argument('-c', '--clientonly', help='Enable clientonly.', default=True)
-    parser.add_argument('-s', '--serveronly', help='Enable serveronly.', default=False)
+    parser.add_argument('-c', '--clientonly', help='Enable clientonly.', action='store_true', default=False)
+    parser.add_argument('-s', '--serveronly', help='Enable serveronly.', action='store_true', default=False)
     return parser
 
 
@@ -138,6 +138,7 @@ async def get_mods(clientonly=False, serveronly=False):
         config_zip = zipfile.ZipFile(config_bytes)
         config_zip.extractall(parent_dir)
     cached_mod_ids = []
+    cached_mods = []
     if exists(mods_cached):
         with open(mods_cached, 'r') as f:
             cached_mod_ids = json.loads(f.read())
@@ -145,8 +146,10 @@ async def get_mods(clientonly=False, serveronly=False):
     import shutil
     for m in mods:
         if clientonly and m.get("serveronly"):
+            log.info("Skipping servermod {}".format(m.get("name")))
             continue
         if serveronly and m.get("clientonly"):
+            log.info("Skipping clientside mod {}".format(m.get("name")))
             continue
         filename = m.get("filename")
         if filename not in cached_mod_ids:
@@ -200,8 +203,14 @@ async def get_mods(clientonly=False, serveronly=False):
         log.debug("We do not have any mods to process.")
     await session.close()
     log.info("Writing cached mod list to {}...".format(mods_cached))
+    for m in mods:
+        if clientonly and m.get("serveronly"):
+            continue
+        if serveronly and m.get("clientonly"):
+            continue
+        cached_mods.append(m.get("filename"))
     with open(mods_cached, 'w') as f:
-        f.write(json.dumps([mod.get('fileName') for mod in mods]))
+        f.write(json.dumps(cached_mods))
 
 
 def assemble_logger(verbosity):
