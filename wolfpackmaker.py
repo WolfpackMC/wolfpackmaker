@@ -19,14 +19,6 @@ from rich.progress import Progress
 
 log = logging.getLogger("rich")
 
-parent_dir = dirname(dirname(abspath(__file__)))
-mods_dir = join(parent_dir, '.minecraft/mods')
-mods_cache_dir = join(dirname(parent_dir), '.mods_cached')
-config_dir = join(parent_dir, '.minecraft/config')
-cached_dir = join(parent_dir, '.wolfpackmaker')
-mods_cached = join(cached_dir, '.cached_mods.json')
-modpack_version_cached = join(cached_dir, '.modpack_version.txt')
-
 headers = {
     'User-Agent': 'Wolfpackmaker (https://woofmc.xyz)'
 }
@@ -44,6 +36,9 @@ def init_args():
     parser.add_argument('-v', '--verbose', help='Increase output verbosity.', action='store_true')
     parser.add_argument('-r', '--repo', help='Wolfpack modpack repository from https://git.kalka.io e.g'
                                              '--repo Odin, from https://git.kalka.io/Wolfpack/Odin', required=True)
+    parser.add_argument('-mmc', '--multimc', help='Enable MultiMC setup.', action='store_true')
+    parser.add_argument('-d', '--download', help='Custom download directory')
+    parser.add_argument('--cache', help='Custom cache directory')
     parser.add_argument('-c', '--clientonly', help='Enable clientonly.', action='store_true', default=False)
     parser.add_argument('-s', '--serveronly', help='Enable serveronly.', action='store_true', default=False)
     return parser
@@ -56,6 +51,21 @@ user = "Wolfpack"
 repo = args.repo
 gitea_api = "https://git.kalka.io/api/v1/repos/{}/{}/releases"
 gitea_files = ['manifest.lock', 'config.zip']
+
+parent_dir = dirname(dirname(abspath(__file__)))
+current_dir = dirname(abspath(__file__))
+if args.download:
+    mods_dir = join(current_dir, args.download)
+else:
+    mods_dir = join(parent_dir, '.minecraft/mods')
+if args.cache:
+    mods_cache_dir = join(current_dir, args.cache)
+else:
+    mods_cache_dir = join(dirname(parent_dir), '.mods_cached')
+config_dir = join(parent_dir, '.minecraft/config')
+cached_dir = join(parent_dir, '.wolfpackmaker')
+mods_cached = join(cached_dir, '.cached_mods.json')
+modpack_version_cached = join(cached_dir, '.modpack_version.txt')
 
 
 def fancy_intro():
@@ -132,12 +142,13 @@ async def get_mods(clientonly=False, serveronly=False):
     Path(cached_dir).mkdir(parents=True, exist_ok=True)
     session = aiohttp.ClientSession(headers=headers)
     assets_list = await get_gitea_data(session)
+    if args.multimc:
+        if check_for_update(assets_list.get("modpack_version")):
+            log.debug("Updating config...")
+            config_bytes = io.BytesIO(assets_list.get('config.zip'))
+            config_zip = zipfile.ZipFile(config_bytes)
+            config_zip.extractall(parent_dir)
     tasks = []
-    if check_for_update(assets_list.get("modpack_version")):
-        log.debug("Updating config...")
-        config_bytes = io.BytesIO(assets_list.get('config.zip'))
-        config_zip = zipfile.ZipFile(config_bytes)
-        config_zip.extractall(parent_dir)
     cached_mod_ids = []
     cached_mods = []
     if exists(mods_cached):
@@ -146,20 +157,20 @@ async def get_mods(clientonly=False, serveronly=False):
     mods = json.loads(assets_list.get('manifest.lock'))
     import shutil
     for m in mods:
+        filename = m.get("filename")
+        if filename not in cached_mod_ids:
+            if exists(join(mods_dir, filename)):
+                log.info("Flagging {} for update...".format(filename))
+                try:
+                    remove(join(mods_dir, filename))
+                except FileNotFoundError:
+                    log.warning("{} not found, skipping anyway".format(filename))
         if clientonly and m.get("serveronly"):
             log.info("Skipping servermod {}".format(m.get("name")))
             continue
         if serveronly and m.get("clientonly"):
             log.info("Skipping clientside mod {}".format(m.get("name")))
             continue
-        filename = m.get("filename")
-        if filename not in cached_mod_ids:
-            if exists(join(mods_dir, filename)):
-                log.debug("Flagging {} for update...".format(filename))
-                try:
-                    remove(join(mods_dir, filename))
-                except FileNotFoundError:
-                    log.debug("{} not found, skipping anyway".format(filename))
         if not exists(join(mods_dir, filename)) or not exists(join(mods_cache_dir, filename)):  # if it does not exist in the folder
             if exists(join(mods_cache_dir, filename)):
                 log.debug("Using cached {} from {}".format(filename, mods_cache_dir))
