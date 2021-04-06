@@ -84,7 +84,10 @@ def fancy_intro():
 
 async def save_mod(mod_filename, mod_downloadurl, session):
     async with session.get(mod_downloadurl) as r:
-        return await r.read(), mod_filename
+        with open(join(mods_cache_dir, mod_filename), 'wb') as f:
+            async for data in r.content.iter_chunked(65535):
+                f.write(data)
+    return mod_filename
 
 
 async def get_raw_data(session, url, to_json=False):
@@ -140,6 +143,7 @@ def process_lockfile(lockfile, clientonly=False, serveronly=False):
 async def get_mods(clientonly=False, serveronly=False):
     Path(mods_dir).mkdir(parents=True, exist_ok=True)
     Path(cached_dir).mkdir(parents=True, exist_ok=True)
+    Path(mods_cache_dir).mkdir(parents=True, exist_ok=True)
     session = aiohttp.ClientSession(headers=headers)
     assets_list = await get_gitea_data(session)
     if args.multimc:
@@ -171,7 +175,8 @@ async def get_mods(clientonly=False, serveronly=False):
         if serveronly and m.get("clientonly"):
             log.info("Skipping clientside mod {}".format(m.get("name")))
             continue
-        if not exists(join(mods_dir, filename)) or not exists(join(mods_cache_dir, filename)):  # if it does not exist in the folder
+        if not exists(join(mods_dir, filename)) or not exists(
+                join(mods_cache_dir, filename)):  # if it does not exist in the folder
             if exists(join(mods_cache_dir, filename)):
                 log.debug("Using cached {} from {}".format(filename, mods_cache_dir))
                 shutil.copy(join(mods_cache_dir, filename), join(mods_dir, filename))
@@ -182,34 +187,11 @@ async def get_mods(clientonly=False, serveronly=False):
                 tasks.append(task)
     if tasks:
         with Progress() as progress:
-            keywords = [
-                'Reticulating splines... >w>',
-                'Installing rockets... owo',
-                'Ensuring integrity... xD',
-                'Adding more cringe... x3',
-                'Installing cringe... >w<',
-                'Making sure we have the right assets... ^.^'
-            ]
-            download_progress = progress.add_task("Downloading {} mods...".format(len(tasks)), total=len(tasks))
-            Path(mods_cache_dir).mkdir(parents=True, exist_ok=True)
+            download_task = progress.add_task(description="Preparing to download...", total=len(to_process))
             for coro in asyncio.as_completed(tasks):
-                import random
-                random_message = owoify.owoify(random.choice(keywords))
-                completed = (-len(to_process) + len(tasks)) + 1
-                progress.update(download_progress,
-                                description="Downloading: {}... {}/{} - ({})".format(filename,
-                                                                                     completed,
-                                                                                     len(tasks), random_message))
-                data, filename = await coro
-                mod_file = io.BytesIO(data)
-                with open(join(mods_cache_dir, filename), 'wb') as f:
-                    progress.update(download_progress,
-                                    advance=1,
-                                    description="Saving: {}... {}/{} - ({})".format(filename,
-                                                                                    completed,
-                                                                                    len(tasks), random_message))
-                    f.write(mod_file.read())
-                    to_process.remove(filename)
+                filename = await coro
+                to_process.remove(filename)
+                progress.update(download_task, description=f"Downloading {filename}...", advance=1)
                 shutil.copy(join(mods_cache_dir, filename), join(mods_dir, filename))
     else:
         log.debug("We do not have any mods to process.")
@@ -241,7 +223,8 @@ def main():
     loop = asyncio.get_event_loop()
     # TODO: Server support, this is the Oil Ocean Zone of Wolfpackmaker :^)
     try:
-        loop.run_until_complete(get_mods(clientonly=args.clientonly, serveronly=args.serveronly))  # The todo is for this purpose
+        loop.run_until_complete(
+            get_mods(clientonly=args.clientonly, serveronly=args.serveronly))  # The todo is for this purpose
     except KeyboardInterrupt or InterruptedError:
         for mod in to_process:
             if exists(join(mods_dir, mod)):
