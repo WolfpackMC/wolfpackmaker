@@ -91,6 +91,13 @@ def main():
     data = []
     for r in responses:
         json_response = json.loads(r)
+        try:
+            author = json_response.get("authors")[0]
+        except IndexError:
+            author = {
+                "name": "Unknown",
+                "url": "Unknown"
+            }
         clean_data = {
             "id": json_response.get("id"),
             "name": json_response.get("name"),
@@ -98,8 +105,8 @@ def main():
             "website_url": json_response.get("website_url"),
             "logo": get_logo(json_response.get("attachments", {})),
             "slug": json_response.get("slug"),
-            "author": json_response.get("authors")[0].get("name"),
-            "author_url": json_response.get("authors")[0].get("url")
+            "author": author.get("name"),
+            "author_url": author.get("url")
         }
         data.append(clean_data)
 

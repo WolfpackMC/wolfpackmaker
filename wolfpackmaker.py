@@ -148,7 +148,7 @@ async def get_mods(clientonly=False, serveronly=False):
     assets_list = await get_gitea_data(session)
     if args.multimc:
         if check_for_update(assets_list.get("modpack_version")):
-            log.debug("Updating config...")
+            log.info("Updating config...")
             config_bytes = io.BytesIO(assets_list.get('config.zip'))
             config_zip = zipfile.ZipFile(config_bytes)
             config_zip.extractall(parent_dir)
