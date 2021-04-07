@@ -118,15 +118,20 @@ async def fetch_mod(curseforge_url, mod_id, session):
 
 
 async def search_mod(curseforge_url, mod_slug, session):
-    search_url = curseforge_url + 'search?gameId=432&sectionId=6&searchfilter={}'.format(mod_slug)
+    search_url = curseforge_url + 'search?gameId=432&sectionId=6&pageSize=1000&searchfilter={}'.format(mod_slug)
     async with session.get(search_url) as r:
         mods = await r.json()
     for m in mods:
         if m.get("slug") == mod_slug:
             log.info("Found {} as {} via CurseForge API! [{}] [{}]".format(mod_slug, m.get("slug"), m.get("name"), m.get("id")))
             return m
-        else:
-            continue
+    log.warning(f"We still cannot find {mod_slug} in the API... wtf? Resorting to CFWidget...")
+    async with session.get(f'https://api.cfwidget.com/minecraft/mc-mods/{mod_slug}') as r:
+        mod = await r.json()
+    if mod:
+        mod_data = await fetch_mod(curseforge_url, mod.get("id"), session)
+        log.info(f"Found it! {mod_data.get('name')}")
+        return mod_data
 
 
 async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest):
@@ -262,6 +267,9 @@ async def process_modpack_config():
                     if args.nomodleftbehind:
                         log.critical("{} was not found{}".format(k, '.' if not args.nomodleftbehind else ', looking manually...'))
                         mod_found = await search_mod(curseforge_url, k, session)
+                        if mod_found is None:
+                            log.critical(f'{k} was not found in CurseForge API. Sorry.')
+                            sys.exit(1)
                         found_mods.append({
                             "id": mod_found.get("id"),
                             "slug": mod_found.get("slug"),
