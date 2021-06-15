@@ -199,34 +199,31 @@ async def process_modpack_config():
                 except AttributeError:
                     custom_url = None
                 if custom_url is not None:
-                    log.info("Using custom URL {} for mod {}".format(k, custom_url))
+                    found_id = None
+                    found_name = k
                     for m in curseforge_data:
                         # Double-check if the custom URL exists in curseforge DB, but DON'T push download data
                         if k == m.get("slug"):
-                            try:
-                                found_id = m.get("id")
-                                found_name = m.get("name")
-                                found_slug = m.get("slug")
-                            except AttributeError:
-                                found_id = None
-                                found_name = k
-                                found_slug = k
-                            clientonly = False
-                            serveronly = False
-                            if v.get("clientonly"):
-                                clientonly = True
-                            if v.get("serveronly"):
-                                serveronly = True
-                            found_mods.append({
-                                "id": found_id or None,
-                                "name": found_name or k,
-                                "slug": k,
-                                "filename": basename(v.get("url")),
-                                "downloadUrl": v.get("url"),
-                                "clientonly": clientonly,
-                                "serveronly": serveronly,
-                                "custom": True
-                            })
+                            found_id = m.get("id")
+                            found_name = m.get("name")
+                            found_slug = m.get("slug")
+                    clientonly = False
+                    serveronly = False
+                    if v.get("clientonly"):
+                        clientonly = True
+                    if v.get("serveronly"):
+                        serveronly = True
+                    found_mods.append({
+                        "id": found_id or None,
+                        "name": found_name or k,
+                        "slug": k,
+                        "filename": '=' in v.get("url") and v.get("url").split("=")[1] or basename(v.get("url")),
+                        "downloadUrl": v.get("url"),
+                        "clientonly": clientonly,
+                        "serveronly": serveronly,
+                        "custom": True
+                    })
+                    log.info(f"Using custom URL {v.get('url')} for mod {found_name}" + (found_id and f" (found in Curseforge DB as {found_name})" or ""))
             for m in curseforge_data:
                 try:
                     custom_url = v.get("url")
