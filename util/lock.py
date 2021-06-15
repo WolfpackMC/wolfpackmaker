@@ -293,11 +293,7 @@ def main():
     task = loop.create_task(process_modpack_config())
     loop.run_until_complete(task)
     save_lockfile()
-    for m in found_mods:
-        if m.get("slug") == 'fastworkbench-minus-replacement':
-            print('found')
-        if m.get("downloadUrl") is None:
-            log.critical(m.get("slug") + ' was not found')
+    sys.exit()
 
 
 if __name__ == '__main__':

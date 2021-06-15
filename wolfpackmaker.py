@@ -147,20 +147,28 @@ async def get_mods(clientonly=False, serveronly=False):
     Path(cached_dir).mkdir(parents=True, exist_ok=True)
     Path(mods_cache_dir).mkdir(parents=True, exist_ok=True)
     session = aiohttp.ClientSession(headers=headers)
-    assets_list = await get_gitea_data(session)
-    if args.multimc:
-        if check_for_update(assets_list.get("modpack_version")):
-            log.info("Updating config...")
-            config_bytes = io.BytesIO(assets_list.get('config.zip'))
-            config_zip = zipfile.ZipFile(config_bytes)
-            config_zip.extractall(parent_dir)
+    if not '.lock' in args.repo:
+        assets_list = await get_gitea_data(session)
+        if args.multimc:
+            if check_for_update(assets_list.get("modpack_version")):
+                log.info("Updating config...")
+                config_bytes = io.BytesIO(assets_list.get('config.zip'))
+                config_zip = zipfile.ZipFile(config_bytes)
+                config_zip.extractall(parent_dir)
+        mods = json.loads(assets_list.get('manifest.lock'))
+    else:
+        if exists(args.repo):
+            log.info(f"Using custom lockfile: {args.repo}")
+            with open(args.repo, "r") as f:
+                mods = json.loads(f.read())
+        else:
+            sys.exit(log.critical(f"Custom lockfile not found: {args.repo}"))
     tasks = []
     cached_mod_ids = []
     cached_mods = []
     if exists(mods_cached):
         with open(mods_cached, 'r') as f:
             cached_mod_ids = json.loads(f.read())
-    mods = json.loads(assets_list.get('manifest.lock'))
     import shutil
     for m in mods:
         filename = m.get("filename")
