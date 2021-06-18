@@ -173,6 +173,7 @@ async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest):
 
 
 async def process_modpack_config():
+    chunked = False # Should chunk
     curseforge_url = 'https://addons-ecs.forgesvc.net/api/v2/addon/'
     try:
         open(args.manifest)
@@ -183,12 +184,26 @@ async def process_modpack_config():
         log.info("Defaulting to manifest.yml. Waiting 3 seconds...")
         await asyncio.sleep(3)
         args.manifest = 'manifest.yml'
+    session = aiohttp.ClientSession()
+    log.debug(f"Established session {session}")
     with open(args.manifest or 'manifest.yml', 'r') as f:
         modpack_manifest = yaml.load(f.read(), Loader=yaml.SafeLoader)
-    with open('curseforge.db', 'r') as f:
-        curseforge_data = json.loads(f.read())
+
+    curseforge_download_url = "https://get.kalka.io/curseforge.json"
+
+    log.info(f"Reading CurseForge data from {curseforge_download_url}")
+    async with session.get(curseforge_download_url) as r:
+        date = datetime.datetime.strptime(r.headers.get("last-modified"), "%a, %d %b %Y %H:%M:%S %Z")
+        log.info(f"CurseForge DB date is {datetime.datetime.strftime(date, '%B %d, %Y at %H:%M:%Sz')}")
+        if chunked:
+            data = bytes()
+            async for c in r.content.iter_chunked(65535):
+                data += c
+        else:
+            data = await r.read()
+        curseforge_data = json.loads(data)
+    log.info(curseforge_data[:2])
     mods = modpack_manifest.get("mods")
-    session = aiohttp.ClientSession()
     tasks = []
     for idx, mod in enumerate(mods):
         for k, v in mods[idx].items():
@@ -284,6 +299,9 @@ def save_lockfile():
     log.info("Saving lockfile...")
     with open('manifest.lock', 'w') as f:
         f.write(json.dumps(found_mods))
+    log.info("Saving pretty-printed file...")
+    with open('manifest.json', 'w') as f:
+        f.write(json.dumps(found_mods, indent=2))
 
 
 def main():

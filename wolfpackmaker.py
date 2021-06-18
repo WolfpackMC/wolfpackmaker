@@ -12,7 +12,7 @@ import zipfile
 
 
 from os.path import dirname, abspath, exists, join
-from os import remove
+from os import remove, getcwd
 from pathlib import Path
 from pyfiglet import Figlet
 from rich.traceback import install as init_traceback
@@ -37,7 +37,7 @@ def init_args():
     )
     parser.add_argument('-v', '--verbose', help='Increase output verbosity.', action='store_true')
     parser.add_argument('-r', '--repo', help='Wolfpack modpack repository from https://git.kalka.io e.g'
-                                             '--repo Odin, from https://git.kalka.io/Wolfpack/Odin', required=True)
+                                             '--repo Odin, from https://git.kalka.io/Wolfpack/Odin')
     parser.add_argument('-mmc', '--multimc', help='Enable MultiMC setup.', action='store_true')
     parser.add_argument('-d', '--download', help='Custom download directory')
     parser.add_argument('--cache', help='Custom cache directory')
@@ -147,7 +147,7 @@ async def get_mods(clientonly=False, serveronly=False):
     Path(cached_dir).mkdir(parents=True, exist_ok=True)
     Path(mods_cache_dir).mkdir(parents=True, exist_ok=True)
     session = aiohttp.ClientSession(headers=headers)
-    if not '.lock' in args.repo:
+    if args.repo is not None and not '.lock' in args.repo:
         assets_list = await get_gitea_data(session)
         if args.multimc:
             if check_for_update(assets_list.get("modpack_version")):
@@ -157,12 +157,17 @@ async def get_mods(clientonly=False, serveronly=False):
                 config_zip.extractall(parent_dir)
         mods = json.loads(assets_list.get('manifest.lock'))
     else:
-        if exists(args.repo):
+        if args.repo is not None and exists(args.repo):
             log.info(f"Using custom lockfile: {args.repo}")
             with open(args.repo, "r") as f:
                 mods = json.loads(f.read())
         else:
-            sys.exit(log.critical(f"Custom lockfile not found: {args.repo}"))
+            if exists(join(getcwd(), 'manifest.lock')):
+                log.info(f"Custom lockfile not found, but we found a manifest.lock in {getcwd()}, using that instead")
+                with open(join(getcwd(), 'manifest.lock')) as f:
+                    mods = json.loads(f.read())
+            else:
+                sys.exit(log.critical(f"Custom lockfile not found: {args.repo}"))
     tasks = []
     cached_mod_ids = []
     cached_mods = []
