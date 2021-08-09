@@ -118,7 +118,7 @@ async def fetch_mod(curseforge_url, mod_id, session):
 
 
 async def search_mod(curseforge_url, mod_slug, session):
-    search_url = curseforge_url + 'search?gameId=432&sectionId=6&pageSize=1000&searchfilter={}'.format(mod_slug)
+    search_url = curseforge_url + 'search?gameId=432&sectionId=6&pageSize=50&searchfilter={}'.format(mod_slug)
     async with session.get(search_url) as r:
         mods = await r.json()
     for m in mods:
