@@ -49,7 +49,7 @@ def init_args():
 parser = init_args()
 args = parse_args(parser)
 
-user = "Wolfpack"
+user = "kalkafox"
 repo = args.repo
 github_api = "https://api.github.com/repos/{}/{}/releases"
 github_files = ['manifest.lock', 'config.zip']
@@ -114,7 +114,7 @@ def check_for_update(modpack_version):
 async def get_github_data(session):
     github_json = await get_raw_data(session, github_api.format(user, repo), to_json=True)
     assets_list = {}
-    modpack_version = github_json[0].get("id")
+    modpack_version = str(github_json[0].get("id"))
     assets_list.update({"modpack_version": modpack_version})
     with open(modpack_version_cached, 'w') as f:
         f.write(modpack_version)
