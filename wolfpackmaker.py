@@ -51,8 +51,8 @@ args = parse_args(parser)
 
 user = "Wolfpack"
 repo = args.repo
-gitea_api = "https://git.kalka.io/api/v1/repos/{}/{}/releases"
-gitea_files = ['manifest.lock', 'config.zip']
+github_api = "https://api.github.com/repos/{}/{}/releases"
+github_files = ['manifest.lock', 'config.zip']
 
 parent_dir = dirname(dirname(abspath(__file__)))
 current_dir = dirname(abspath(__file__))
@@ -111,21 +111,21 @@ def check_for_update(modpack_version):
                 return False
 
 
-async def get_gitea_data(session):
-    gitea_json = await get_raw_data(session, gitea_api.format(user, repo), to_json=True)
+async def get_github_data(session):
+    github_json = await get_raw_data(session, github_api.format(user, repo), to_json=True)
     assets_list = {}
-    modpack_version = gitea_json[0].get("name")
+    modpack_version = github_json[0].get("id")
     assets_list.update({"modpack_version": modpack_version})
     with open(modpack_version_cached, 'w') as f:
         f.write(modpack_version)
     try:
-        assets = gitea_json[0].get("assets")
+        assets = github_json[0].get("assets")
     except KeyError as e:
         log.critical("Git data not found. Possible typo? Error: {}".format(e))
         sys.exit(1)
     for asset in assets:
         name = asset.get('name')
-        if name in gitea_files:
+        if name in github_files:
             assets_list.update({asset.get('name'): await get_raw_data(session, asset.get('browser_download_url'))})
     return assets_list
 
@@ -148,7 +148,7 @@ async def get_mods(clientonly=False, serveronly=False):
     Path(mods_cache_dir).mkdir(parents=True, exist_ok=True)
     session = aiohttp.ClientSession(headers=headers)
     if args.repo is not None and not '.lock' in args.repo:
-        assets_list = await get_gitea_data(session)
+        assets_list = await get_github_data(session)
         if args.multimc:
             if check_for_update(assets_list.get("modpack_version")):
                 log.info("Updating config...")
