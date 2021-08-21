@@ -12,6 +12,8 @@ logging.basicConfig(
     level=logging.DEBUG, format="%(message)s", datefmt="[%X]", handlers=[RichHandler(rich_tracebacks=True)]
 )
 
+headers = {'User-Agent':'wolfpackmaker/0.3.0 (made by Kalka) business inquiries: b@kalka.io'}
+
 
 def fancy_intro(log):
     f = Figlet().renderText("woofmc.xyz")
@@ -19,6 +21,7 @@ def fancy_intro(log):
     log.info(f)
     log.info(str('').join(['####' for _ in range(16)]))
 
+import time
 
 async def get_curseforge_api(session, index, page_size, log):
     curseforge_url = 'https://addons-ecs.forgesvc.net/api/v2/addon/search?gameId=432&sectionId=6&sortDescending=true' \
@@ -30,28 +33,27 @@ async def get_curseforge_api(session, index, page_size, log):
 
 async def process_curseforge_db(log):
     index = 0
-    page_size = 1000
-    # we could normally while True this, but CurseForge API stops at 9999 (from 0, so 10000 mods each run)
-    # this is more than plenty, but should a custom mod be read it may as well be requested in the lock script
-    # we are sorting mods by featured, so this is hopefully a seldom issue
+    page_size = 50
     session = aiohttp.ClientSession()
     workers = []
     mods = []
-    for i in range(10):  # each loop we add 1000 to the index, to basically flip a page in the API
+    for i in range(200):
         workers.append(asyncio.create_task(get_curseforge_api(session, index, page_size, log)))
         index += page_size
-    for task in asyncio.as_completed(workers):
-        mod_data = await task
-        for m in mod_data:
+    future = asyncio.gather(*workers)
+    for d in await future:
+        for m in d:
             mods.append({
                 "id": m.get("id"),
                 "name": m.get("name"),
-                "slug": m.get("slug")
+                "slug": m.get("slug"),
+                "download_count": int(m.get("downloadCount"))
             })
+    log.info(f"{len(mods)} mods.")
     await session.close()
-    with open('curseforge.db', 'w') as f:
+    with open('curseforge.json', 'w') as f:
         log.debug("Saving mod data...")
-        f.write(json.dumps(mods))
+        f.write(json.dumps(mods, indent=2))
 
 
 def main():

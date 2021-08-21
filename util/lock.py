@@ -118,7 +118,7 @@ async def fetch_mod(curseforge_url, mod_id, session):
 
 
 async def search_mod(curseforge_url, mod_slug, session):
-    search_url = curseforge_url + 'search?gameId=432&sectionId=6&pageSize=50&searchfilter={}'.format(mod_slug)
+    search_url = curseforge_url + 'search?gameId=432&sectionId=6&searchfilter={}'.format(mod_slug)
     async with session.get(search_url) as r:
         mods = await r.json()
     for m in mods:
@@ -224,6 +224,9 @@ async def process_modpack_config():
                             found_slug = m.get("slug")
                     clientonly = False
                     serveronly = False
+                    optional = False
+                    if v.get("optional"):
+                        optional = True
                     if v.get("clientonly"):
                         clientonly = True
                     if v.get("serveronly"):
@@ -236,6 +239,7 @@ async def process_modpack_config():
                         "downloadUrl": v.get("url"),
                         "clientonly": clientonly,
                         "serveronly": serveronly,
+                        "optional": optional,
                         "custom": True
                     })
                     log.info(f"Using custom URL {v.get('url')} for mod {found_name}" + (found_id and f" (found in Curseforge DB as {found_name})" or ""))
@@ -250,9 +254,12 @@ async def process_modpack_config():
                                                                                          m.get("name"),
                                                                                          m.get("id")))
                     found = True
+                    optional = False
                     clientonly = False
                     serveronly = False
                     if v is not None:
+                        if v.get("optional"):
+                            optional = True
                         if v.get("clientonly"):
                             clientonly = True
                         if v.get("serveronly"):
@@ -262,19 +269,22 @@ async def process_modpack_config():
                         "slug": m.get("slug"),
                         "name": m.get("name"),
                         "clientonly": clientonly,
-                        "serveronly": serveronly
+                        "serveronly": serveronly,
+                        "optional": optional
                     })
                     task = asyncio.create_task(fetch_mod_data(curseforge_url, m, session, modpack_manifest))
                     tasks.append(task)
             if not found:
                 try:
                     custom_url = v.get("url")
+                    optional = v.get("optional")
                     clientonly = v.get("clientonly")
                     serveronly = v.get("serveronly")
                 except AttributeError:
                     clientonly = False
                     serveronly = False
                     custom_url = None
+                    optional = None
                 if not custom_url:
                     if args.nomodleftbehind:
                         log.critical("{} was not found{}".format(k, '.' if not args.nomodleftbehind else ', looking manually...'))
@@ -287,7 +297,8 @@ async def process_modpack_config():
                             "slug": mod_found.get("slug"),
                             "name": mod_found.get("name"),
                             "clientonly": clientonly,
-                            "serveronly": serveronly
+                            "serveronly": serveronly,
+                            "optional": optional
                         })
                         task = asyncio.create_task(fetch_mod_data(curseforge_url, mod_found, session, modpack_manifest))
                         tasks.append(task)
