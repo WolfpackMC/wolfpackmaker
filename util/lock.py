@@ -110,7 +110,8 @@ async def fetch_files(curseforge_url, mod, session):
         except ContentTypeError:
             log.warning(f"CurseForge is being a cunt, so we're using CFWidget for {mod}. God bless.")
             async with session.get(f'https://api.cfwidget.com/{mod}') as r:
-                files = await r.json().get('files')
+                d = await r.json()
+                files = d.get('files')
     return files
 
 
