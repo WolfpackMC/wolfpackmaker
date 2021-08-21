@@ -16,10 +16,10 @@ jobs:
       - uses: actions/checkout@v2
       - run: pacman -Syyu --noconfirm python3
       - run: python3 -m ensurepip
-      - run: pip install -r requirements.txt
-      - run: python util/curseforgedb.py
-      - run: python util/lock.py -m tests/manifest-fabric.yml
-      - run: python util/lock.py -m tests/manifest-forge.yml
+      - run: python3 -m pip install -r requirements.txt
+      - run: python3 util/curseforgedb.py
+      - run: python3 util/lock.py -m tests/manifest-fabric.yml
+      - run: python3 util/lock.py -m tests/manifest-forge.yml
 
   docker-build:
     runs-on: self-hosted
