@@ -9,6 +9,7 @@ import yaml
 
 from os.path import basename
 from rich.logging import RichHandler
+from aiohttp.client_exceptions import ContentTypeError
 from rich.traceback import install as init_traceback
 from pyfiglet import Figlet
 
@@ -112,7 +113,12 @@ async def fetch_mod(curseforge_url, mod_id, session):
     mod_url = curseforge_url + str(mod_id)
     async with session.get(mod_url) as r:
         # log.debug("Responding to request {}...".format(mod_url))
-        mod = await r.json()
+        try:
+            mod = await r.json()
+        except ContentTypeError:
+            log.warning(f"CurseForge is being a cunt, so we're using CFWidget for {mod_id}. God bless.")
+            async with session.get(f'https://api.cfwidget.com/{mod_id}') as r:
+                mod = await r.json()
     return mod
 
 
