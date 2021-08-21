@@ -1,0 +1,39 @@
+
+name: Wolfpack-Odin
+
+on:
+  push:
+    branches: [ master ]
+
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: self-hosted
+
+    container:
+      image: archlinux
+    steps:
+      - uses: actions/checkout@v2
+      - run: pacman -Syyu --noconfirm python3
+      - run: pip install -r requirements.txt
+      - run: python util/curseforgedb.py
+      - run: python util/lock.py -m tests/manifest-fabric.yml
+      - run: python util/lock.py -m tests/manifest-forge.yml
+
+  docker-build:
+    runs-on: self-hosted
+
+    steps:
+      - uses: docker/login
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - uses: docker/metadata-action
+        with:
+          images: kalka/wolfpackmaker
+      - uses: docker/build-push-action
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
