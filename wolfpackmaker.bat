@@ -17,4 +17,5 @@ if errorlevel 1 (
 
 %python_bin% -m pip install -r ..\wolfpackmaker\requirements.txt --no-warn-script-location
 %python_bin% ..\wolfpackmaker\wolfpackmaker.py %*
+EXIT /B %ERRORLEVEL%
 

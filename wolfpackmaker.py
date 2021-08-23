@@ -8,6 +8,7 @@ import json
 import logging
 import owoify
 import sys
+import time
 import zipfile
 
 
@@ -43,7 +44,7 @@ def init_args():
     parser.add_argument('--cache', help='Custom cache directory')
     parser.add_argument('-c', '--clientonly', help='Enable clientonly.', action='store_true', default=False)
     parser.add_argument('-s', '--serveronly', help='Enable serveronly.', action='store_true', default=False)
-    parser.add_argument('-rs', '--release-selector', help='GitHub Releases index for branched releases.', default=0)
+    parser.add_argument('-rs', '--rselector', help='GitHub Releases index for branched releases.', default=0)
     return parser
 
 
@@ -107,20 +108,20 @@ def check_for_update(modpack_version):
     if exists(modpack_version_cached):
         with open(modpack_version_cached, 'r') as f:
             if f.read() == modpack_version:
-                return True
-            else:
                 return False
+            else:
+                return True
 
 
 async def get_github_data(session):
     github_json = await get_raw_data(session, github_api.format(user, repo), to_json=True)
     assets_list = {}
-    modpack_version = str(github_json[int(args.rs)].get("id"))
+    modpack_version = str(github_json[int(args.rselector)].get("id"))
     assets_list.update({"modpack_version": modpack_version})
     with open(modpack_version_cached, 'w') as f:
         f.write(modpack_version)
     try:
-        assets = github_json[int(args.rs)].get("assets")
+        assets = github_json[int(args.rselector)].get("assets")
     except KeyError as e:
         log.critical("Git data not found. Possible typo? Error: {}".format(e))
         sys.exit(1)
@@ -178,18 +179,18 @@ async def get_mods(clientonly=False, serveronly=False):
     import shutil
     for m in mods:
         filename = m.get("filename")
-        if filename not in cached_mod_ids:
-            log.info("Flagging {} for update...".format(filename))
-            try:
-                remove(join(mods_dir, filename))
-            except FileNotFoundError:
-                log.warning("{} not found, skipping anyway".format(filename))
         if clientonly and m.get("serveronly"):
             log.info("Skipping servermod {}".format(m.get("name")))
             continue
         if serveronly and m.get("clientonly"):
             log.info("Skipping clientside mod {}".format(m.get("name")))
             continue
+        if filename not in cached_mod_ids:
+            log.info("Flagging {} for update...".format(filename))
+            try:
+                remove(join(mods_dir, filename))
+            except FileNotFoundError:
+                log.warning("{} not found, skipping anyway".format(filename))
         if not exists(join(mods_dir, filename)) or not exists(
                 join(mods_cache_dir, filename)):  # if it does not exist in the folder
             if exists(join(mods_cache_dir, filename)):
@@ -223,12 +224,17 @@ async def get_mods(clientonly=False, serveronly=False):
 
 
 def assemble_logger(verbosity):
+    debug_mode = logging.DEBUG if verbosity else logging.INFO
     logging.basicConfig(
-        level=(logging.DEBUG if verbosity else logging.INFO),
+        level=(debug_mode),
         format="%(message)s",
         datefmt="[%X]",
         handlers=[RichHandler()]
     )
+    logfile = join(cached_dir, f'wolfpackmaker-{time.time()}-output.log')
+    fh = logging.FileHandler(logfile)
+    fh.setLevel(debug_mode)
+    log.addHandler(fh)
 
 
 def main():
