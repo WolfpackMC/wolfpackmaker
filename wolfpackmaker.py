@@ -43,6 +43,7 @@ def init_args():
     parser.add_argument('--cache', help='Custom cache directory')
     parser.add_argument('-c', '--clientonly', help='Enable clientonly.', action='store_true', default=False)
     parser.add_argument('-s', '--serveronly', help='Enable serveronly.', action='store_true', default=False)
+    parser.add_argument('-rs', '--release-selector', help='GitHub Releases index for branched releases.', default=0)
     return parser
 
 
@@ -114,12 +115,12 @@ def check_for_update(modpack_version):
 async def get_github_data(session):
     github_json = await get_raw_data(session, github_api.format(user, repo), to_json=True)
     assets_list = {}
-    modpack_version = str(github_json[0].get("id"))
+    modpack_version = str(github_json[int(args.rs)].get("id"))
     assets_list.update({"modpack_version": modpack_version})
     with open(modpack_version_cached, 'w') as f:
         f.write(modpack_version)
     try:
-        assets = github_json[0].get("assets")
+        assets = github_json[int(args.rs)].get("assets")
     except KeyError as e:
         log.critical("Git data not found. Possible typo? Error: {}".format(e))
         sys.exit(1)
@@ -178,12 +179,11 @@ async def get_mods(clientonly=False, serveronly=False):
     for m in mods:
         filename = m.get("filename")
         if filename not in cached_mod_ids:
-            if exists(join(mods_dir, filename)):
-                log.info("Flagging {} for update...".format(filename))
-                try:
-                    remove(join(mods_dir, filename))
-                except FileNotFoundError:
-                    log.warning("{} not found, skipping anyway".format(filename))
+            log.info("Flagging {} for update...".format(filename))
+            try:
+                remove(join(mods_dir, filename))
+            except FileNotFoundError:
+                log.warning("{} not found, skipping anyway".format(filename))
         if clientonly and m.get("serveronly"):
             log.info("Skipping servermod {}".format(m.get("name")))
             continue
