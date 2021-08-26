@@ -144,10 +144,13 @@ def process_lockfile(lockfile, clientonly=False, serveronly=False):
     return mods
 
 
-async def get_mods(clientonly=False, serveronly=False):
+def create_folders():
     Path(mods_dir).mkdir(parents=True, exist_ok=True)
     Path(cached_dir).mkdir(parents=True, exist_ok=True)
     Path(mods_cache_dir).mkdir(parents=True, exist_ok=True)
+
+
+async def get_mods(clientonly=False, serveronly=False):
     session = aiohttp.ClientSession(headers=headers)
     if args.repo is not None and not '.lock' in args.repo:
         assets_list = await get_github_data(session)
@@ -231,7 +234,9 @@ def assemble_logger(verbosity):
         datefmt="[%X]",
         handlers=[RichHandler()]
     )
-    logfile = join(cached_dir, f'wolfpackmaker-{time.time()}-output.log')
+    current_time = time.time()
+    logfile_name = f'wolfpackmaker-{current_time}-output.log'
+    logfile = join(cached_dir, logfile_name)
     fh = logging.FileHandler(logfile)
     fh.setLevel(debug_mode)
     log.addHandler(fh)
@@ -239,6 +244,7 @@ def assemble_logger(verbosity):
 
 def main():
     init_traceback()
+    create_folders()
     assemble_logger(args.verbose)
     fancy_intro()
     loop = asyncio.get_event_loop()
