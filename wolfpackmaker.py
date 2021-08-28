@@ -44,7 +44,7 @@ def init_args():
     parser.add_argument('--cache', help='Custom cache directory')
     parser.add_argument('-c', '--clientonly', help='Enable clientonly.', action='store_true', default=False)
     parser.add_argument('-s', '--serveronly', help='Enable serveronly.', action='store_true', default=False)
-    parser.add_argument('-rs', '--rselector', help='GitHub Releases index for branched releases.', default=0)
+    parser.add_argument('-rs', '--release', help='Get release name.', default='latest')
     return parser
 
 
@@ -116,20 +116,22 @@ def check_for_update(modpack_version):
 async def get_github_data(session):
     github_json = await get_raw_data(session, github_api.format(user, repo), to_json=True)
     assets_list = {}
-    modpack_version = str(github_json[int(args.rselector)].get("id"))
-    assets_list.update({"modpack_version": modpack_version})
-    with open(modpack_version_cached, 'w') as f:
-        f.write(modpack_version)
-    try:
-        assets = github_json[int(args.rselector)].get("assets")
-    except KeyError as e:
-        log.critical("Git data not found. Possible typo? Error: {}".format(e))
-        sys.exit(1)
-    for asset in assets:
-        name = asset.get('name')
-        if name in github_files:
-            assets_list.update({asset.get('name'): await get_raw_data(session, asset.get('browser_download_url'))})
-    return assets_list
+    for g in github_json:
+        if args.release in g.get("name"):
+            modpack_version = str(g.get("id"))
+            assets_list.update({"modpack_version": modpack_version})
+            with open(modpack_version_cached, 'w') as f:
+                f.write(modpack_version)
+            try:
+                assets = g.get("assets")
+            except KeyError as e:
+                log.critical("Git data not found. Possible typo? Error: {}".format(e))
+                sys.exit(1)
+            for asset in assets:
+                name = asset.get('name')
+                if name in github_files:
+                    assets_list.update({asset.get('name'): await get_raw_data(session, asset.get('browser_download_url'))})
+            return assets_list
 
 
 def process_lockfile(lockfile, clientonly=False, serveronly=False):
