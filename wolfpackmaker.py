@@ -190,10 +190,11 @@ async def get_mods(clientonly=False, serveronly=False):
             continue
         if filename not in cached_mod_ids:
             log.info("Flagging {} for update...".format(filename))
-            try:
-                remove(join(mods_dir, filename))
-            except FileNotFoundError:
-                log.warning("{} not found, skipping anyway".format(filename))
+            filedir = join(mods_dir, filename)
+            if exists(filedir):
+                remove(filedir)
+            else:
+                log.warning(f"{filedir} does not exist... why?")
         if not exists(join(mods_dir, filename)) or not exists(
                 join(mods_cache_dir, filename)):  # if it does not exist in the folder
             if exists(join(mods_cache_dir, filename)):

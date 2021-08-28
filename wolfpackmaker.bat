@@ -16,6 +16,10 @@ if errorlevel 1 (
 )
 
 %python_bin% -m pip install -r ..\wolfpackmaker\requirements.txt --no-warn-script-location
+
+echo "Updating wolfpackmaker.py..."
+powershell -Command "Invoke-WebRequest https://raw.githubusercontent.com/kalkafox/wolfpackmaker/master/wolfpackmaker.py -OutFile ..\wolfpackmaker\wolfpackmaker.py"
+
 %python_bin% ..\wolfpackmaker\wolfpackmaker.py %*
 EXIT /B %ERRORLEVEL%
 
