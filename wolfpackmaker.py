@@ -120,7 +120,7 @@ async def get_github_data(session):
     github_json = await get_raw_data(session, github_api.format(user, repo), to_json=True)
     assets_list = {}
     for g in github_json:
-        if args.release in g.get("name"):
+        if args.release == g.get("name"):
             log.info(f"Using {g.get('name')} as the release selector.")
             modpack_version = str(g.get("id"))
             assets_list.update({"modpack_version": modpack_version})
