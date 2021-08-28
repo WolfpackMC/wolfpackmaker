@@ -118,6 +118,7 @@ async def get_github_data(session):
     assets_list = {}
     for g in github_json:
         if args.release in g.get("name"):
+            log.info(f"Using {g.get('name')} as the release selector.")
             modpack_version = str(g.get("id"))
             assets_list.update({"modpack_version": modpack_version})
             with open(modpack_version_cached, 'w') as f:
@@ -182,6 +183,15 @@ async def get_mods(clientonly=False, serveronly=False):
         with open(mods_cached, 'r') as f:
             cached_mod_ids = json.loads(f.read())
     import shutil
+    new_mods = [m.get("filename") for m in mods]
+    for cm in cached_mod_ids:
+        if cm not in new_mods:
+            log.info("Flagging {} for update...".format(cm))
+            filedir = join(mods_dir, cm)
+            if exists(filedir):
+                remove(filedir)
+            else:
+                log.warning(f"{filedir} does not exist... why?")
     for m in mods:
         filename = m.get("filename")
         if clientonly and m.get("serveronly"):
@@ -190,13 +200,6 @@ async def get_mods(clientonly=False, serveronly=False):
         if serveronly and m.get("clientonly"):
             log.info("Skipping clientside mod {}".format(m.get("name")))
             continue
-        if filename not in cached_mod_ids:
-            log.info("Flagging {} for update...".format(filename))
-            filedir = join(mods_dir, filename)
-            if exists(filedir):
-                remove(filedir)
-            else:
-                log.warning(f"{filedir} does not exist... why?")
         if not exists(join(mods_dir, filename)) or not exists(
                 join(mods_cache_dir, filename)):  # if it does not exist in the folder
             if exists(join(mods_cache_dir, filename)):
