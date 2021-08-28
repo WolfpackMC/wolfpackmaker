@@ -20,7 +20,18 @@ from rich.traceback import install as init_traceback
 from rich.logging import RichHandler
 from rich.progress import Progress
 
+def get_git_revision(base_path):
+    git_dir = Path(base_path) / '.git'
+    with (git_dir / 'HEAD').open('r') as head:
+        ref = head.readline().split(' ')[-1].strip()
+
+    with (git_dir / ref).open('r') as git_hash:
+        return git_hash.readline().strip()
+
 log = logging.getLogger("rich")
+
+class Wolfpackmaker:
+    VERSION = f'0.1.0-{get_git_revision(dirname(abspath(__file__)))}'
 
 headers = {
     'User-Agent': 'Wolfpackmaker (https://woofmc.xyz)'
@@ -253,6 +264,7 @@ def main():
     create_folders()
     assemble_logger(args.verbose)
     fancy_intro()
+    log.info(f"Wolfpackmaker version {Wolfpackmaker.VERSION}")
     loop = asyncio.get_event_loop()
     # TODO: Server support, this is the Oil Ocean Zone of Wolfpackmaker :^)
     try:
