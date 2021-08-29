@@ -192,16 +192,16 @@ async def get_mods(clientonly=False, serveronly=False):
     for cm in cached_mod_ids:
         try:
             cached_modpack_version = cm.get("id")
+            for f in cm.get("mods"):
+                if f not in new_mods:
+                    log.info("Flagging {} for update...".format(f))
+                    filedir = join(mods_dir, f)
+                    if exists(filedir):
+                        remove(filedir)
+                    else:
+                        log.warning(f"{filedir} does not exist... why?")
         except AttributeError:
             cached_modpack_version = 'none'
-        for f in cm.get("mods"):
-            if f not in new_mods:
-                log.info("Flagging {} for update...".format(f))
-                filedir = join(mods_dir, f)
-                if exists(filedir):
-                    remove(filedir)
-                else:
-                    log.warning(f"{filedir} does not exist... why?")
     if modpack_version != cached_modpack_version:
         log.info(f"Saving modpack version {modpack_version}...")
         cached_mods.append({'id': modpack_version, 'mods': new_mods})
