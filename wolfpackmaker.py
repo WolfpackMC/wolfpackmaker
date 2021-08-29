@@ -188,7 +188,12 @@ async def get_mods(clientonly=False, serveronly=False):
         with open(mods_cached, 'r') as f:
             cached_mod_ids = json.loads(f.read())
     new_mods = [m.get("filename") for m in mods]
+    cached_modpack_version = str()
     for cm in cached_mod_ids:
+        try:
+            cached_modpack_version = cm.get("id")
+        except AttributeError:
+            cached_modpack_version = 'none'
         for f in cm.get("mods"):
             if f not in new_mods:
                 log.info("Flagging {} for update...".format(f))
@@ -197,6 +202,12 @@ async def get_mods(clientonly=False, serveronly=False):
                     remove(filedir)
                 else:
                     log.warning(f"{filedir} does not exist... why?")
+    if modpack_version != cached_modpack_version:
+        log.info(f"Saving modpack version {modpack_version}...")
+        cached_mods.append({'id': modpack_version, 'mods': new_mods})
+    else:
+        cached_mods.append({'id': modpack_version, 'mods': new_mods})
+        log.warning(f"{modpack_version} is already cached!")
     for m in mods:
         filename = m.get("filename")
         if clientonly and m.get("serveronly"):
@@ -227,13 +238,6 @@ async def get_mods(clientonly=False, serveronly=False):
         log.debug("We do not have any mods to process.")
     await session.close()
     log.info("Writing cached mod list to {}...".format(mods_cached))
-    cached_mod_data = {'id': modpack_version, 'mods': []}
-    for m in mods:
-        if clientonly and m.get("serveronly"):
-            continue
-        if serveronly and m.get("clientonly"):
-            continue
-        cached_mod_data.get('mods').append(m.get("filename"))
     with open(mods_cached, 'w') as f:
         f.write(json.dumps(cached_mods))
 
