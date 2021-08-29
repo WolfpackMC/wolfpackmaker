@@ -7,6 +7,7 @@ import io
 import json
 import logging
 import owoify
+import shutil
 import sys
 import time
 import zipfile
@@ -23,7 +24,7 @@ from rich.progress import Progress
 log = logging.getLogger("rich")
 
 class Wolfpackmaker:
-    VERSION = f'0.1.0'
+    VERSION = f'0.1.1'
 
 headers = {
     'User-Agent': 'Wolfpackmaker (https://woofmc.xyz)'
@@ -82,7 +83,8 @@ def fancy_intro():
     import random
     keywords = random.choice(
         ['A custom made Minecraft modpack script. Nothing special, hehe.',
-         'Please don\'t tell anyone about this...'
+         'Please don\'t tell anyone about this...',
+         'Hehe. UwU, It\'s all we have, I know. I\'m sorry!'
          ]
     )
     log.info(owoify.owoify(keywords))
@@ -135,7 +137,7 @@ async def get_github_data(session):
                 name = asset.get('name')
                 if name in github_files:
                     assets_list.update({asset.get('name'): await get_raw_data(session, asset.get('browser_download_url'))})
-            return assets_list
+            return assets_list, modpack_version
 
 
 def process_lockfile(lockfile, clientonly=False, serveronly=False):
@@ -159,7 +161,7 @@ def create_folders():
 async def get_mods(clientonly=False, serveronly=False):
     session = aiohttp.ClientSession(headers=headers)
     if args.repo is not None and not '.lock' in args.repo:
-        assets_list = await get_github_data(session)
+        assets_list, modpack_version = await get_github_data(session)
         if args.multimc:
             if check_for_update(assets_list.get("modpack_version")):
                 log.info("Updating config...")
@@ -185,16 +187,16 @@ async def get_mods(clientonly=False, serveronly=False):
     if exists(mods_cached):
         with open(mods_cached, 'r') as f:
             cached_mod_ids = json.loads(f.read())
-    import shutil
     new_mods = [m.get("filename") for m in mods]
     for cm in cached_mod_ids:
-        if cm not in new_mods:
-            log.info("Flagging {} for update...".format(cm))
-            filedir = join(mods_dir, cm)
-            if exists(filedir):
-                remove(filedir)
-            else:
-                log.warning(f"{filedir} does not exist... why?")
+        for f in cm.get("mods"):
+            if f not in new_mods:
+                log.info("Flagging {} for update...".format(f))
+                filedir = join(mods_dir, f)
+                if exists(filedir):
+                    remove(filedir)
+                else:
+                    log.warning(f"{filedir} does not exist... why?")
     for m in mods:
         filename = m.get("filename")
         if clientonly and m.get("serveronly"):
@@ -225,12 +227,13 @@ async def get_mods(clientonly=False, serveronly=False):
         log.debug("We do not have any mods to process.")
     await session.close()
     log.info("Writing cached mod list to {}...".format(mods_cached))
+    cached_mod_data = {'id': modpack_version, 'mods': []}
     for m in mods:
         if clientonly and m.get("serveronly"):
             continue
         if serveronly and m.get("clientonly"):
             continue
-        cached_mods.append(m.get("filename"))
+        cached_mod_data.get('mods') += [m.get('filename')]
     with open(mods_cached, 'w') as f:
         f.write(json.dumps(cached_mods))
 
@@ -256,7 +259,7 @@ def main():
     create_folders()
     assemble_logger(args.verbose)
     fancy_intro()
-    log.info(f"Wolfpackmaker version {Wolfpackmaker.VERSION}")
+    log.info(f"Wolfpackmaker / {Wolfpackmaker.VERSION}")
     loop = asyncio.get_event_loop()
     # TODO: Server support, this is the Oil Ocean Zone of Wolfpackmaker :^)
     try:
