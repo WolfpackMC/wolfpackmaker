@@ -233,7 +233,7 @@ async def get_mods(clientonly=False, serveronly=False):
             continue
         if serveronly and m.get("clientonly"):
             continue
-        cached_mod_data.get('mods') += [m.get('filename')]
+        cached_mod_data.get('mods').append(m.get("filename"))
     with open(mods_cached, 'w') as f:
         f.write(json.dumps(cached_mods))
 
