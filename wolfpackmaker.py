@@ -156,6 +156,7 @@ def create_folders():
     Path(mods_dir).mkdir(parents=True, exist_ok=True)
     Path(cached_dir).mkdir(parents=True, exist_ok=True)
     Path(mods_cache_dir).mkdir(parents=True, exist_ok=True)
+    Path(join(cached_dir, 'cached_config')).mkdir(parents=True, exist_ok=True)
 
 
 async def get_mods(clientonly=False, serveronly=False):
@@ -163,11 +164,24 @@ async def get_mods(clientonly=False, serveronly=False):
     if args.repo is not None and not '.lock' in args.repo:
         assets_list, modpack_version = await get_github_data(session)
         if args.multimc:
+            ignored_cache = []
             if check_for_update(assets_list.get("modpack_version")):
                 log.info("Updating config...")
                 config_bytes = io.BytesIO(assets_list.get('config.zip'))
                 config_zip = zipfile.ZipFile(config_bytes)
-                config_zip.extractall(parent_dir)
+                cached_config_dir = join(cached_dir, 'cached_config')
+                config_zip.extractall(cached_config_dir)
+                if exists(join(cached_config_dir, '.configignore')):
+                    with open(join(cached_config_dir, '.configignore'), 'r') as f:
+                        for l in f.readlines():
+                            ignored_cache += [l]
+                log.info("Checking for ignored configs...")
+                for c in ignored_cache:
+                    if exists(join(cached_config_dir, c)):
+                        log.info(f"Ignoring {c}...")
+                        remove(join(cached_config_dir, c))
+                log.info("Moving new config to directory...")
+                shutil.copy(cached_config_dir, config_dir)
         mods = json.loads(assets_list.get('manifest.lock'))
     else:
         if args.repo is not None and exists(args.repo):
