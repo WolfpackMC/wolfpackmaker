@@ -14,7 +14,7 @@ import zipfile
 
 
 from os.path import dirname, abspath, exists, join
-from os import remove, getcwd
+from os import remove, getcwd, listdir
 from pathlib import Path
 from pyfiglet import Figlet
 from rich.traceback import install as init_traceback
@@ -165,6 +165,8 @@ async def get_mods(clientonly=False, serveronly=False):
         assets_list, modpack_version = await get_github_data(session)
         if args.multimc:
             ignored_cache = []
+            for f in listdir(mods_dir):  #temporary
+                remove(f)
             if check_for_update(assets_list.get("modpack_version")):
                 log.info("Updating config...")
                 config_bytes = io.BytesIO(assets_list.get('config.zip'))
