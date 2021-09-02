@@ -166,7 +166,7 @@ async def get_mods(clientonly=False, serveronly=False):
         if args.multimc:
             ignored_cache = []
             for f in listdir(mods_dir):  #temporary
-                remove(f)
+                remove(join(mods_dir, f))
             if check_for_update(assets_list.get("modpack_version")):
                 log.info("Updating config...")
                 config_bytes = io.BytesIO(assets_list.get('config.zip'))
