@@ -13,6 +13,7 @@ import time
 import zipfile
 
 
+from distutils.dir_util import copy_tree
 from os.path import dirname, abspath, exists, join
 from os import remove, getcwd, listdir
 from pathlib import Path
@@ -182,7 +183,7 @@ async def get_mods(clientonly=False, serveronly=False):
                     log.info(f"Ignoring {c}...")
                     remove(join(cached_config_dir, c))
             log.info("Moving new config to directory...")
-            shutil.copy(cached_config_dir, config_dir)
+            copy_tree(cached_config_dir, config_dir)
         mods = json.loads(assets_list.get('manifest.lock'))
     else:
         if args.repo is not None and exists(args.repo):
