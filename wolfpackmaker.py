@@ -167,7 +167,10 @@ async def get_mods(clientonly=False, serveronly=False):
         if args.multimc:
             ignored_cache = []
             for f in listdir(mods_dir):  #temporary
-                remove(join(mods_dir, f))
+                try:
+                    remove(join(mods_dir, f))
+                except PermissionError:
+                    pass
             log.info("Updating config...")
             config_bytes = io.BytesIO(assets_list.get('config.zip'))
             config_zip = zipfile.ZipFile(config_bytes)
