@@ -171,6 +171,8 @@ async def get_mods(clientonly=False, serveronly=False):
                     remove(join(mods_dir, f))
                 except PermissionError:
                     pass
+                except IsADirectoryError:
+                    pass
             log.info("Updating config...")
             config_bytes = io.BytesIO(assets_list.get('config.zip'))
             config_zip = zipfile.ZipFile(config_bytes)
