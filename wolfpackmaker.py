@@ -7,6 +7,7 @@ import io
 import json
 import logging
 import owoify
+import distutils
 import shutil
 import sys
 import time
@@ -171,10 +172,13 @@ def create_folders():
 
 async def get_mods(clientonly=False, serveronly=False):
     session = aiohttp.ClientSession(headers=headers)
+    modpack_version = ''
     if args.repo is not None and not '.lock' in args.repo:
         assets_list, modpack_version = await get_github_data(session)
         if args.multimc:
             ignored_cache = []
+            log.info("Cleaning mods folder...")
+            start_time = time.time()
             for f in listdir(mods_dir):  #temporary
                 try:
                     remove(join(mods_dir, f))
@@ -182,6 +186,7 @@ async def get_mods(clientonly=False, serveronly=False):
                     pass
                 except IsADirectoryError:
                     pass
+            log.info(f"Finished in {time.time() - start_time}s.")
             log.info("Updating config...")
             config_bytes = io.BytesIO(assets_list.get('config.zip'))
             config_zip = zipfile.ZipFile(config_bytes)
@@ -252,7 +257,6 @@ async def get_mods(clientonly=False, serveronly=False):
                 join(mods_cache_dir, filename)):  # if it does not exist in the folder
             if exists(join(mods_cache_dir, filename)):
                 log.debug("Using cached {} from {}".format(filename, mods_cache_dir))
-                shutil.copy(join(mods_cache_dir, filename), join(mods_dir, filename))
             else:
                 download_url = m.get("downloadUrl")
                 if not args.singlethread:
@@ -269,10 +273,11 @@ async def get_mods(clientonly=False, serveronly=False):
                 filename = await coro
                 to_process.remove(filename)
                 progress.update(download_task, description=f"Downloading {filename}...", advance=1)
-                shutil.copy(join(mods_cache_dir, filename), join(mods_dir, filename))
     else:
         log.debug("We do not have any mods to process.")
     await session.close()
+    log.info("Copying mods...")
+    copy_tree(mods_cache_dir, mods_dir)
     log.info("Writing cached mod list to {}...".format(mods_cached))
     with open(mods_cached, 'w') as f:
         f.write(json.dumps(cached_mods))
