@@ -50,7 +50,7 @@ def init_args():
     parser.add_argument('-c', '--clientonly', help='Enable clientonly.', action='store_true', default=False)
     parser.add_argument('-s', '--serveronly', help='Enable serveronly.', action='store_true', default=False)
     parser.add_argument('-rs', '--release', help='Get release name.', default='latest')
-    parser.add_argument('--singlethread', help='Experimental. Run on one thread only.', default=False)
+    parser.add_argument('--singlethread', help='Experimental. Run on one thread only.', action='store_true')
     return parser
 
 
@@ -104,10 +104,10 @@ async def save_mod(mod_filename, mod_downloadurl, session):
 def save_mod_sync(mod_filename, mod_downloadurl):
     import urllib3
     session = urllib3.PoolManager(headers=headers)
-    with session.request("GET", mod_downloadurl) as r:
-        for data in r.content.iter_chunked(65535):
-            with open(join(mods_cache_dir, mod_filename), 'wb') as f:
-                f.write(data)
+    r = session.request("GET", mod_downloadurl, preload_content=False)
+    with open(join(mods_cache_dir, mod_filename), 'wb') as f:
+        for data in r.stream(65535):
+            f.write(data)
 
 async def get_raw_data(session, url, to_json=False):
     async with session.get(url) as r:
