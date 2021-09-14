@@ -24,11 +24,13 @@ def fancy_intro(log):
 import time
 
 async def get_curseforge_api(session, index, page_size, log):
+    log.debug("Requesting CurseForge API starting from index {}...".format(index))
     curseforge_url = 'https://addons-ecs.forgesvc.net/api/v2/addon/search?gameId=432&sectionId=6&sortDescending=true' \
                      '&sort=\'Featured\' '
     async with session.get(curseforge_url + '&pageSize={}&index={}'.format(page_size, index)) as r:
-        log.debug("Requesting CurseForge API starting from index {}...".format(index))
-        return await r.json()
+        data = await r.json()
+        await asyncio.sleep(0.5)
+        return data
 
 
 async def process_curseforge_db(log):
@@ -46,8 +48,9 @@ async def process_curseforge_db(log):
             mods.append({
                 "id": m.get("id"),
                 "name": m.get("name"),
+                "summary": m.get("summary"),
                 "slug": m.get("slug"),
-                "download_count": int(m.get("downloadCount"))
+                "latest_files": m.get("gameVersionLatestFiles")
             })
     log.info(f"{len(mods)} mods.")
     await session.close()
