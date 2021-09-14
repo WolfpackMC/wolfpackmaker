@@ -50,6 +50,7 @@ def init_args():
     parser.add_argument('-c', '--clientonly', help='Enable clientonly.', action='store_true', default=False)
     parser.add_argument('-s', '--serveronly', help='Enable serveronly.', action='store_true', default=False)
     parser.add_argument('-rs', '--release', help='Get release name.', default='latest')
+    parser.add_argument('--singlethread', help='Experimental. Run on one thread only.', default=False)
     return parser
 
 
@@ -99,6 +100,14 @@ async def save_mod(mod_filename, mod_downloadurl, session):
                 f.write(data)
     return mod_filename
 
+
+def save_mod_sync(mod_filename, mod_downloadurl):
+    import urllib3
+    session = urllib3.PoolManager(headers=headers)
+    with session.request("GET", mod_downloadurl) as r:
+        for data in r.content.iter_chunked(65535):
+            with open(join(mods_cache_dir, mod_filename), 'wb') as f:
+                f.write(data)
 
 async def get_raw_data(session, url, to_json=False):
     async with session.get(url) as r:
@@ -246,9 +255,13 @@ async def get_mods(clientonly=False, serveronly=False):
                 shutil.copy(join(mods_cache_dir, filename), join(mods_dir, filename))
             else:
                 download_url = m.get("downloadUrl")
-                task = asyncio.ensure_future(save_mod(filename, download_url, session))
+                if not args.singlethread:
+                    task = asyncio.ensure_future(save_mod(filename, download_url, session))
+                    tasks.append(task)
+                else:
+                    save_mod_sync(filename, download_url)
+                    log.info(f"Downloaded {download_url}.")
                 to_process.append(filename)
-                tasks.append(task)
     if tasks:
         with Progress() as progress:
             download_task = progress.add_task(description="Preparing to download...", total=len(to_process))
