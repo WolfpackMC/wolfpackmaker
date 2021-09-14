@@ -247,6 +247,9 @@ async def get_mods(clientonly=False, serveronly=False):
         cached_mods.append({'id': modpack_version, 'mods': new_mods})
     for m in mods:
         filename = m.get("filename")
+        if filename is None:
+            log.warning(f"Couldn't find a download file for {m.get('slug')}... this is usually Kalka's fault")
+            continue
         if clientonly and m.get("serveronly"):
             log.info("Skipping servermod {}".format(m.get("name")))
             continue
@@ -277,7 +280,10 @@ async def get_mods(clientonly=False, serveronly=False):
         log.debug("We do not have any mods to process.")
     await session.close()
     log.info("Copying mods...")
-    copy_tree(mods_cache_dir, mods_dir)
+    for m in mods:
+        filename = m.get("filename")
+        if exists(join(mods_cache_dir, filename)):
+            shutil.copy(join(mods_cache_dir, filename), join(mods_dir, filename))
     log.info("Writing cached mod list to {}...".format(mods_cached))
     with open(mods_cached, 'w') as f:
         f.write(json.dumps(cached_mods))
