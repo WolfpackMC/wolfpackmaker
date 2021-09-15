@@ -21,16 +21,20 @@ def fancy_intro(log):
     log.info(f)
     log.info(str('').join(['####' for _ in range(16)]))
 
-import time
 
-async def get_curseforge_api(session, index, page_size, log):
-    log.debug("Requesting CurseForge API starting from index {}...".format(index))
-    curseforge_url = 'https://addons-ecs.forgesvc.net/api/v2/addon/search?gameId=432&sectionId=6&sortDescending=true' \
-                     '&sort=\'Featured\' '
+async def get_curseforge_api(session, index, page_size, log, version=None):
+    curseforge_url = f'https://addons-ecs.forgesvc.net/api/v2/addon/search?categoryId=0&gameId=432{version and "&gameVersion=" + str(version)}&sectionId=6&searchFilter=&sort=0'
     async with session.get(curseforge_url + '&pageSize={}&index={}'.format(page_size, index)) as r:
         data = await r.json()
-        await asyncio.sleep(0.5)
+        log.debug("Requested CurseForge API starting from index {}{}.".format(index,
+                                                                                 version and ' for version ' + version or ''))
         return data
+
+versions = [
+    "1.16.5",
+    "1.12.2",
+    "1.7.10"
+]
 
 
 async def process_curseforge_db(log):
@@ -42,9 +46,17 @@ async def process_curseforge_db(log):
     for i in range(200):
         workers.append(asyncio.create_task(get_curseforge_api(session, index, page_size, log)))
         index += page_size
+    for v in versions:
+        index = 0
+        page_size = 50
+        for i in range(200):
+            workers.append(asyncio.create_task(get_curseforge_api(session, index, page_size, log, version=v)))
+            index += page_size
     future = asyncio.gather(*workers)
     for d in await future:
         for m in d:
+            if m.get("id") in [v.get("id") for v in mods]:
+                continue
             mods.append({
                 "id": m.get("id"),
                 "name": m.get("name"),
