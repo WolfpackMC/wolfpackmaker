@@ -13,6 +13,9 @@ from aiohttp.client_exceptions import ContentTypeError
 from rich.traceback import install as init_traceback
 from pyfiglet import Figlet
 
+TYPE_FABRIC = 4
+TYPE_FORGE = 1
+
 # noinspection PyArgumentList
 logging.basicConfig(
     level=logging.DEBUG, format="%(message)s", datefmt="[%X]", handlers=[RichHandler(rich_tracebacks=True)]
@@ -47,72 +50,19 @@ def init_args():
                                                             '\nDefaults to true', default=True)
     return parser
 
+
 parser = init_args()
 args = parse_args(parser)
 
-async def sort_files(files, mod, modpack_manifest):
-    filtered_file_data = []
-    found = False
-    acceptable_versions = [modpack_manifest.get("version")]
-    for f in files:
-        if modpack_manifest.get("modloader") == 'Forge' and 'Fabric' in f.get("gameVersion"):
-            continue
-        if modpack_manifest.get("modloader") == 'Fabric' and 'Forge' in f.get("gameVersion"):
-            continue
-
-        # The following is a hacky method to allow fuzziness for 1.16.5 versions.
-        # e.g If the modpack on CurseForge is displayed as "1.16.4" even though it's compatible for 1.16.5
-        # This is usually an author error, when they either forget to update the file to support the 1.16.5 tag, or just
-        # don't care enough.
-        if modpack_manifest.get("version") == "1.16.5" and modpack_manifest.get("version") not in f.get("gameVersion"):
-            for i in range(1,5):
-                string = '1.16.{}'.format(i)
-                if string in f.get("gameVersion"):
-                    f.get("gameVersion").append(modpack_manifest.get("version"))
-
-        if modpack_manifest.get("version") not in f.get("gameVersion"):
-            continue
-        # log.debug("Found {} for {} with a date of {}".format(f.get("displayName"), mod.get("slug"), f.get("fileDate")))
-        found = True
-        filtered_file_data.append(f)
-    if not found:
-        log.critical(
-            "We couldn't find a download file for {}"
-            ". Possible {} mod?".format(mod.get("slug"),
-                                        ('Fabric' if 'Forge' in modpack_manifest.get("modloader") else 'Forge')))
-        sys.exit(1)
-    dates = []
-    for date in filtered_file_data:
-        try:
-            file_date = datetime.datetime.strptime(date.get("fileDate"), '%Y-%m-%dT%H:%M:%S.%f%z')
-        except ValueError:
-            file_date = datetime.datetime.strptime(date.get("fileDate"), '%Y-%m-%dT%H:%M:%S%z')
-        dates.append(file_date)
-    filtered_file = {}
-    for f in filtered_file_data:
-        try:
-            file_date = datetime.datetime.strptime(f.get("fileDate"), '%Y-%m-%dT%H:%M:%S.%f%z')
-        except ValueError:
-            file_date = datetime.datetime.strptime(f.get("fileDate"), '%Y-%m-%dT%H:%M:%S%z')
-        if not file_date == max(dates):
-            continue
-        # log.debug("Using {} as the filedate for {}".format(file_date, mod.get("name")))
-        filtered_file.update(f)
-    return filtered_file
-
-
-async def fetch_files(curseforge_url, mod, session):
-    files_url = curseforge_url + '{}/files'.format(mod.get("id"))
+async def fetch_file(curseforge_url, mod, session, fileId):
+    files_url = curseforge_url + '{}/file/{}'.format(mod.get("id"), fileId)
     async with session.get(files_url) as r:
         # log.debug("Responding to request {}...".format(files_url))
         try:
-            files = await r.json()
+            file = await r.json()
         except ContentTypeError:
-            log.warning(f"CurseForge is being a cunt, so we're using CFWidget for {mod.get('id')}. God bless.")
-            async with session.get(f'https://api.cfwidget.com/{mod.get("id")}') as r:
-                d = await r.json()
-                files = d.get('files')
-    return files
+            sys.exit(log.error("ContentType error."))
+    return file
 
 
 async def fetch_mod(curseforge_url, mod_id, session):
@@ -122,11 +72,8 @@ async def fetch_mod(curseforge_url, mod_id, session):
         try:
             mod = await r.json()
         except ContentTypeError:
-            log.warning(f"CurseForge is being a cunt, so we're using CFWidget for {mod_id}. God bless.")
-            async with session.get(f'https://api.cfwidget.com/{mod_id}') as r:
-                mod = await r.json()
+            sys.exit(log.error("ContentType error."))
     return mod
-
 
 
 async def search_mod(curseforge_url, mod_slug, session):
@@ -135,57 +82,78 @@ async def search_mod(curseforge_url, mod_slug, session):
         mods = await r.json()
     for m in mods:
         if m.get("slug") == mod_slug:
-            log.info("Found {} as {} via CurseForge API! [{}] [{}]".format(mod_slug, m.get("slug"), m.get("name"), m.get("id")))
+            log.info("Found {} as {} via CurseForge API! [{}] [{}]".format(mod_slug, m.get("slug"), m.get("name"),
+                                                                           m.get("id")))
             return m
-    log.warning(f"We still cannot find {mod_slug} in the API... wtf? Resorting to CFWidget...")
-    async with session.get(f'https://api.cfwidget.com/minecraft/mc-mods/{mod_slug}') as r:
-        mod = await r.json()
-    if mod:
-        mod_data = await fetch_mod(curseforge_url, mod.get("id"), session)
-        log.info(f"Found it! {mod_data.get('name')}")
-        return mod_data
+    log.warning(f"We still cannot find {mod_slug} in the API... wtf?")
+
+
+modloader = ''
 
 
 async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest):
-    files = await fetch_files(curseforge_url, mod, session)
-    # log.debug("Checking for dependencies...")
-    filtered_file = await sort_files(files, mod, modpack_manifest)
-    for dependencies in filtered_file.get("dependencies"):
-        if dependencies.get("type") == 3:
-            dependency_mod = await fetch_mod(curseforge_url, dependencies.get("addonId"), session)
-            manifest_mods = [list(mod.keys()) for mod in modpack_manifest.get("mods")]
-            found = False
-            for m in manifest_mods:
-                if dependency_mod.get("slug") == str().join(m) or dependency_mod.get("slug") in [mod.get("slug") for mod in found_mods]:
-                    log.warning("{} already found! Skipping.".format(dependency_mod.get("slug")))
-                    found = True
-                    break
-            if found:
-                continue
-            log.debug(
-                "Resolving dependency: {} ({}) for mod {}".format(
-                    dependency_mod.get("slug"),
-                    dependency_mod.get("name"),
-                    mod.get("slug")
-                ))
-            # double check to make sure we don't have a duplicate
-            dependency_file = await sort_files(
-                await fetch_files(curseforge_url, dependency_mod, session), dependency_mod, modpack_manifest)
-            found_mods.append({
-                "id": dependency_mod.get("id"),
-                "slug": dependency_mod.get("slug"),
-                "name": dependency_mod.get("name"),
-                "downloadUrl": dependency_file.get("downloadUrl"),
-                "filename": dependency_file.get("fileName")})
-                # log.debug(dependency_file)
-    for m in found_mods:
-        if m.get("slug") == mod.get("slug"):
-            log.debug("Adding {} to the manifest from mod {}".format(filtered_file.get("downloadUrl"), mod.get("name")))
-            m.update({"downloadUrl": filtered_file.get("downloadUrl"), "filename": filtered_file.get("fileName")})
+    mc_version = [modpack_manifest.get("version")]
+    if "1.16.5" in mc_version:
+        for i in range(1, 5):
+            mc_version.append(f"1.16.{i}")
+    file_found = False
+    for version in mod.get("latest_files"):
+        mod_compat = version.get("modLoader")
+        if modpack_manifest.get("modloader").lower() == 'forge' and mod_compat == TYPE_FABRIC:
+            continue
+        if modpack_manifest.get("modloader").lower() == 'fabric' and mod_compat == TYPE_FORGE:
+            continue
+        if file_found:
+            continue
+        if version.get("gameVersion") in mc_version:
+            file_id = version.get("projectFileId")
+            file = await fetch_file(curseforge_url, mod, session, file_id)
+            for m in found_mods:
+                if m.get("slug") == mod.get("slug"):
+                    log.debug("Adding {} to the manifest from mod {}".format(file.get("downloadUrl"),
+                                                                             mod.get("name")))
+                    m.update({"downloadUrl": file.get("downloadUrl"), "filename": file.get("fileName")})
+            file_found = True
+            for dependencies in file.get("dependencies"):
+                if dependencies.get("type") == 3:
+                    dependency_mod = await fetch_mod(curseforge_url, dependencies.get("addonId"), session)
+                    manifest_mods = [list(mod.keys()) for mod in modpack_manifest.get("mods")]
+                    found = False
+                    for m in manifest_mods:
+                        if dependency_mod.get("slug") == str().join(m) or dependency_mod.get("slug") in [mod.get("slug")
+                                                                                                         for mod in
+                                                                                                         found_mods]:
+                            found = True
+                            break
+                    if found:
+                        continue
+                    log.debug(
+                        "Resolving dependency: {} ({}) for mod {}".format(
+                            dependency_mod.get("slug"),
+                            dependency_mod.get("name"),
+                            mod.get("slug")
+                        ))
+                    # double check to make sure we don't have a duplicate
+                    dependency_file = await fetch_file(curseforge_url, mod, session, file_id)
+                    found_mods.append({
+                        "id": dependency_mod.get("id"),
+                        "slug": dependency_mod.get("slug"),
+                        "name": dependency_mod.get("name"),
+                        "downloadUrl": dependency_file.get("downloadUrl"),
+                        "filename": dependency_file.get("fileName")})
+                    # log.debug(dependency_file)
+                    for m in found_mods:
+                        if m.get("slug") == mod.get("slug"):
+                            log.debug("Adding {} to the manifest from mod {}".format(file.get("downloadUrl"),
+                                                                                     mod.get("name")))
+                            m.update({"downloadUrl": file.get("downloadUrl"), "filename": file.get("fileName")})
+    if not file_found:
+        log.warning(
+            f"Mod {mod.get('slug')} [{mod.get('name')}] does not have an apparent version for {mc_version}, tread with caution")
 
 
 async def process_modpack_config():
-    chunked = False # Should chunk
+    chunked = True  # Should chunk
     curseforge_url = 'https://addons-ecs.forgesvc.net/api/v2/addon/'
     try:
         open(args.manifest)
@@ -208,6 +176,7 @@ async def process_modpack_config():
         date = datetime.datetime.strptime(r.headers.get("last-modified"), "%a, %d %b %Y %H:%M:%S %Z")
         log.info(f"CurseForge DB date is {datetime.datetime.strftime(date, '%B %d, %Y at %H:%M:%Sz')}")
         if chunked:
+            log.info("Reading chunked data... (it's probably big)")
             data = bytes()
             async for c in r.content.iter_chunked(65535):
                 data += c
@@ -254,7 +223,8 @@ async def process_modpack_config():
                         "optional": optional,
                         "custom": True
                     })
-                    log.info(f"Using custom URL {v.get('url')} for mod {found_name}" + (found_id and f" (found in Curseforge DB as {found_name})" or ""))
+                    log.info(f"Using custom URL {v.get('url')} for mod {found_name}" + (
+                                found_id and f" (found in Curseforge DB as {found_name})" or ""))
             for m in curseforge_data:
                 try:
                     custom_url = v.get("url")
@@ -292,18 +262,36 @@ async def process_modpack_config():
                     optional = v.get("optional")
                     clientonly = v.get("clientonly")
                     serveronly = v.get("serveronly")
+                    id = v.get("id")
                 except AttributeError:
                     clientonly = False
                     serveronly = False
                     custom_url = None
                     optional = None
+                    id = None
                 if not custom_url:
                     if args.nomodleftbehind:
-                        log.critical("{} was not found{}".format(k, '.' if not args.nomodleftbehind else ', looking manually...'))
-                        mod_found = await search_mod(curseforge_url, k, session)
+
+                        log.warning("{} was not found{}".format(k,
+                                                                 '.' if not args.nomodleftbehind else ', looking manually...'))
+                        if id:
+                            log.info(f"Using {id} for {k}...")
+                            cf_get = await session.get(curseforge_url + str(id))
+                            data = await cf_get.json()
+                            log.info("Resolved {} as {} through CurseForge! [{}] [{}]".format(k,
+                                                                                                 data.get("slug"),
+                                                                                                 data.get("name"),
+                                                                                                 data.get("id")))
+                            mod_found = {
+                                "id": data.get("id"),
+                                "slug": data.get("slug"),
+                                "name": data.get("name"),
+                                "latest_files": data.get("gameVersionLatestFiles")
+                            }
+                        else:
+                            mod_found = await search_mod(curseforge_url, k, session)
                         if mod_found is None:
                             log.critical(f'{k} was not found in CurseForge API. Sorry.')
-                            sys.exit(1)
                         found_mods.append({
                             "id": mod_found.get("id"),
                             "slug": mod_found.get("slug"),
