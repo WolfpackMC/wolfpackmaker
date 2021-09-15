@@ -58,7 +58,7 @@ def init_args():
 parser = init_args()
 args = parse_args(parser)
 
-user = "kalkafox"
+user = "WolfpackMC"
 repo = args.repo
 github_api = "https://api.github.com/repos/{}/{}/releases"
 github_files = ['manifest.lock', 'config.zip']
