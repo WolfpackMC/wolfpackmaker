@@ -118,6 +118,7 @@ async def get_raw_data(session, url, to_json=False):
             return await r.read()
 
 to_process = []  # mods to process
+to_copy_process = [] # mods to copy
 
 
 def check_for_update(modpack_version):
@@ -227,21 +228,22 @@ async def get_mods(clientonly=False, serveronly=False):
             cached_mod_ids = json.loads(f.read())
     new_mods = [m.get("filename") for m in mods]
     cached_modpack_version = str()
-    for cm in cached_mod_ids:
-        try:
-            cached_modpack_version = cm.get("id")
-            if cached_modpack_version == modpack_version:
-                for f in cm.get("mods"):
-                    if f not in new_mods:
-                        log.info("Flagging {} for update...".format(f))
-                        filedir = join(mods_dir, f)
-                        if exists(filedir):
-                            remove(filedir)
-                        else:
-                            log.warning(f"{filedir} does not exist... why?")
-            cached_mods.append(cm)
-        except AttributeError:
-            cached_modpack_version = 'none'
+    if args.multimc:
+        for cm in cached_mod_ids:
+            try:
+                cached_modpack_version = cm.get("id")
+                if cached_modpack_version == modpack_version:
+                    for f in cm.get("mods"):
+                        if f not in new_mods:
+                            log.info("Flagging {} for update...".format(f))
+                            filedir = join(mods_dir, f)
+                            if exists(filedir):
+                                remove(filedir)
+                            else:
+                                log.warning(f"{filedir} does not exist... why?")
+                cached_mods.append(cm)
+            except AttributeError:
+                cached_modpack_version = 'none'
     if modpack_version != cached_modpack_version:
         log.info(f"Saving modpack version {modpack_version}...")
         cached_mods.append({'id': modpack_version, 'mods': new_mods})
@@ -256,11 +258,13 @@ async def get_mods(clientonly=False, serveronly=False):
         if serveronly and m.get("clientonly"):
             log.info("Skipping clientside mod {}".format(m.get("name")))
             continue
+        to_copy_process.append(filename)
         if not exists(join(mods_dir, filename)) or not exists(
                 join(mods_cache_dir, filename)):  # if it does not exist in the folder
             if exists(join(mods_cache_dir, filename)):
                 log.debug("Using cached {} from {}".format(filename, mods_cache_dir))
             else:
+                to_process.append(filename)
                 download_url = m.get("downloadUrl")
                 if not args.singlethread:
                     task = asyncio.ensure_future(save_mod(filename, download_url, session))
@@ -268,22 +272,29 @@ async def get_mods(clientonly=False, serveronly=False):
                 else:
                     save_mod_sync(filename, download_url)
                     log.info(f"Downloaded {download_url}.")
-                to_process.append(filename)
+                    to_process.remove(filename)
     if tasks:
         with Progress() as progress:
-            download_task = progress.add_task(description="Preparing to download...", total=len(to_process))
+            total = len(to_process)
+            download_task = progress.add_task(description=f"Preparing to download...", total=total)
+            processed = 0
             for coro in asyncio.as_completed(tasks):
                 filename = await coro
+                processed += 1
                 to_process.remove(filename)
-                progress.update(download_task, description=f"Downloading {filename}...", advance=1)
+                progress.update(download_task, description=f"Downloaded {filename}. ({processed}/{total})", advance=1)
     else:
         log.debug("We do not have any mods to process.")
     await session.close()
-    log.info("Copying mods...")
-    for m in mods:
-        filename = m.get("filename")
-        if exists(join(mods_cache_dir, filename)):
-            shutil.copy(join(mods_cache_dir, filename), join(mods_dir, filename))
+    processed = 0
+    with Progress() as progress:
+        total = len(to_copy_process)
+        copy_task = progress.add_task(description=f"Copying mods... ({processed}/{total}", total=total)
+        for m in to_copy_process:
+            if exists(join(mods_cache_dir, m)):
+                shutil.copy(join(mods_cache_dir, m), join(mods_dir, m))
+                processed += 1
+                progress.update(copy_task, description=f"Copied {m}. ({processed}/{total})", advance=1)
     log.info("Writing cached mod list to {}...".format(mods_cached))
     with open(mods_cached, 'w') as f:
         f.write(json.dumps(cached_mods))
