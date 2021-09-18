@@ -8,6 +8,7 @@ import json
 import logging
 import owoify
 import distutils
+import platform
 import shutil
 import sys
 import time
@@ -26,11 +27,15 @@ from rich.progress import Progress
 log = logging.getLogger("rich")
 
 class Wolfpackmaker:
-    VERSION = f'0.1.1'
+    VERSION = f'0.2.0'
 
 headers = {
     'User-Agent': 'Wolfpackmaker (https://woofmc.xyz)'
 }
+
+macos_incompatible_mods = [
+    "itlt"
+]
 
 
 def parse_args(parser):
@@ -51,7 +56,7 @@ def init_args():
     parser.add_argument('-c', '--clientonly', help='Enable clientonly.', action='store_true', default=False)
     parser.add_argument('-s', '--serveronly', help='Enable serveronly.', action='store_true', default=False)
     parser.add_argument('-rs', '--release', help='Get release name.', default='latest')
-    parser.add_argument('--singlethread', help='Experimental. Run on one thread only.', action='store_true')
+    parser.add_argument('--singlethread', help='Run on one thread only.', action='store_true')
     return parser
 
 
@@ -132,6 +137,12 @@ def check_for_update(modpack_version):
 
 async def get_github_data(session):
     github_json = await get_raw_data(session, github_api.format(user, repo), to_json=True)
+    try:
+        if github_json.get("message") == "Not Found":
+            log.info(github_api.format(user, repo))
+            sys.exit(log.critical("Release " + github_json.get("message")))
+    except AttributeError:
+        pass
     assets_list = {}
     for g in github_json:
         if args.release == g.get("name"):
@@ -241,12 +252,14 @@ async def get_mods(clientonly=False, serveronly=False):
                                 remove(filedir)
                             else:
                                 log.warning(f"{filedir} does not exist... why?")
+                    continue
                 cached_mods.append(cm)
             except AttributeError:
                 cached_modpack_version = 'none'
     if modpack_version != cached_modpack_version:
         log.info(f"Saving modpack version {modpack_version}...")
-        cached_mods.append({'id': modpack_version, 'mods': new_mods})
+    cached_mods.append({'id': modpack_version, 'mods': new_mods})
+    log.info(f"Detected version {platform.version()}")
     for m in mods:
         filename = m.get("filename")
         if filename is None:
@@ -258,6 +271,14 @@ async def get_mods(clientonly=False, serveronly=False):
         if serveronly and m.get("clientonly"):
             log.info("Skipping clientside mod {}".format(m.get("name")))
             continue
+        if 'darwin' in platform.version().lower():
+            found = False
+            for im in macos_incompatible_mods:
+                if im in filename:
+                    log.info(f"Skipping {im}")
+                    found = True
+            if found:
+                continue
         to_copy_process.append(filename)
         if not exists(join(mods_dir, filename)) or not exists(
                 join(mods_cache_dir, filename)):  # if it does not exist in the folder
