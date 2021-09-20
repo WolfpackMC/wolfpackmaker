@@ -183,7 +183,6 @@ async def process_modpack_config():
         else:
             data = await r.read()
         curseforge_data = json.loads(data)
-    log.info(curseforge_data[:2])
     mods = modpack_manifest.get("mods")
     tasks = []
     for idx, mod in enumerate(mods):
