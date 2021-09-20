@@ -145,7 +145,7 @@ async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest):
                         for v in mc_version:
                             if v not in dep.get("gameVersion"):
                                 continue
-                        dates.append(file_date)
+                            dates.append(file_date)
                     if not dates:
                         break
                     current_date = max(dates)
