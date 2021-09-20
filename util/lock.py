@@ -57,7 +57,7 @@ args = parse_args(parser)
 async def fetch_file(curseforge_url, mod, session, fileId):
     files_url = curseforge_url + '{}/file/{}'.format(mod.get("id"), fileId)
     async with session.get(files_url) as r:
-        # log.debug("Responding to request {}...".format(files_url))
+        log.debug("Responding to request {}...".format(files_url))
         try:
             file = await r.json()
         except ContentTypeError:
@@ -90,6 +90,7 @@ async def search_mod(curseforge_url, mod_slug, session):
 
 modloader = ''
 
+import datetime
 
 async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest):
     mc_version = [modpack_manifest.get("version")]
@@ -133,8 +134,29 @@ async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest):
                             dependency_mod.get("name"),
                             mod.get("slug")
                         ))
-                    # double check to make sure we don't have a duplicate
-                    dependency_file = await fetch_file(curseforge_url, mod, session, file_id)
+                    dep_file_id = None
+                    cf_files = await session.get(f"{curseforge_url}{dependency_mod.get('id')}/files")
+                    dates = []
+                    for dep in await cf_files.json():
+                        try:
+                            file_date = datetime.datetime.strptime(dep.get("fileDate"), '%Y-%m-%dT%H:%M:%S.%f%z')
+                        except ValueError:
+                            file_date = datetime.datetime.strptime(dep.get("fileDate"), '%Y-%m-%dT%H:%M:%S%z')
+                        for v in mc_version:
+                            if v not in dep.get("gameVersion"):
+                                continue
+                        dates.append(file_date)
+                    if not dates:
+                        break
+                    current_date = max(dates)
+                    for f in await cf_files.json():
+                        try:
+                            file_date = datetime.datetime.strptime(f.get("fileDate"), '%Y-%m-%dT%H:%M:%S.%f%z')
+                        except ValueError:
+                            file_date = datetime.datetime.strptime(f.get("fileDate"), '%Y-%m-%dT%H:%M:%S%z')
+                        if current_date == file_date:
+                            dep_file_id = f.get("id")
+                    dependency_file = await fetch_file(curseforge_url, dependency_mod, session, dep_file_id)
                     found_mods.append({
                         "id": dependency_mod.get("id"),
                         "slug": dependency_mod.get("slug"),
@@ -142,11 +164,6 @@ async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest):
                         "downloadUrl": dependency_file.get("downloadUrl"),
                         "filename": dependency_file.get("fileName")})
                     # log.debug(dependency_file)
-                    for m in found_mods:
-                        if m.get("slug") == mod.get("slug"):
-                            log.debug("Adding {} to the manifest from mod {}".format(file.get("downloadUrl"),
-                                                                                     mod.get("name")))
-                            m.update({"downloadUrl": file.get("downloadUrl"), "filename": file.get("fileName")})
     if not file_found:
         log.warning(
             f"Mod {mod.get('slug')} [{mod.get('name')}] does not have an apparent version for {mc_version}, tread with caution")
