@@ -37,6 +37,8 @@ macos_incompatible_mods = [
     "itlt"
 ]
 
+meme_activated = True
+
 
 def parse_args(parser):
     args = parser.parse_args()
@@ -272,6 +274,8 @@ async def get_mods(clientonly=False, serveronly=False):
             log.info("Skipping clientside mod {}".format(m.get("name")))
             continue
         if 'darwin' in platform.version().lower():
+            if meme_activated:
+                log.critical(f" Detected version {platform.version.lower()}! It's probably Cee...")
             found = False
             for im in macos_incompatible_mods:
                 if im in filename:
