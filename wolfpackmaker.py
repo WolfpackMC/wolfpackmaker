@@ -261,7 +261,9 @@ async def get_mods(clientonly=False, serveronly=False):
     if modpack_version != cached_modpack_version:
         log.info(f"Saving modpack version {modpack_version}...")
     cached_mods.append({'id': modpack_version, 'mods': new_mods})
-    log.info(f"Detected version {platform.version()}")
+    if 'darwin' in platform.version().lower():
+        if meme_activated:
+            log.critical(f" Detected version {platform.version().lower()}! It's probably Cee...")
     for m in mods:
         filename = m.get("filename")
         if filename is None:
@@ -274,8 +276,6 @@ async def get_mods(clientonly=False, serveronly=False):
             log.info("Skipping clientside mod {}".format(m.get("name")))
             continue
         if 'darwin' in platform.version().lower():
-            if meme_activated:
-                log.critical(f" Detected version {platform.version().lower()}! It's probably Cee...")
             found = False
             for im in macos_incompatible_mods:
                 if im in filename:
