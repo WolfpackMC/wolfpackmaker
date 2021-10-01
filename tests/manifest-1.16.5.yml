@@ -1,0 +1,283 @@
+modloader: Forge
+version: 1.16.5
+mods:
+- mouse-tweaks:
+    clientonly: true
+- reauth:
+    clientonly: true
+- just-enough-resources-jer:
+    clientonly: true
+- toast-control:
+    clientonly: true
+- randompatches-forge:
+- better-advancements:
+- default-options:
+    clientonly: true
+- jei-integration:
+- its-the-little-things:
+    clientonly: true
+- craftpresence:
+    clientonly: true
+- antighost:
+    clientonly: true
+- let-sleeping-dogs-lie:
+    clientonly: true
+- light-overlay:
+    clientonly: true
+- no-potion-shift:
+    clientonly: true
+- a-lib:
+- abnormals-core:
+- abnormals-delight:
+- absent-by-design:
+- abundance:
+- advanced-chimneys:
+- ai-improvements:
+- akashic-tome:
+- alexs-mobs:
+- alchemistry:
+- angel-ring:
+- apotheosis:
+- appleskin:
+- applied-energistics-2:
+- aquaculture:
+- architectury-forge:
+- ars-nouveau:
+- astral-sorcery:
+    url: https://github.com/kalkafox/AstralSorcery/releases/download/1.16-ci/astralsorcery-1.16-1.16.5-1.13.12.jar
+- atmospheric:
+- attributefix:
+- autoreglib:
+- autumnity:
+- backpacked:
+- backpacker:
+- bad-wither-no-cookie-reloaded:
+- bed-benefits:
+- berry-good:
+- better-badlands:
+- better-burning:
+- better-mobgriefing-gamerule:
+- biggerreactors:
+- biomes-o-plenty:
+- blockcarpentry:
+- blood-magic:
+- brandons-core:
+- bookshelf:
+- botania:
+- bountiful:
+- building-gadgets:
+- buzzier-bees:
+- caelus:
+- carry-on:
+- cb-multipart:
+- cc-tweaked:
+- charm-reforged:
+- chemlib:
+- chisel:
+- chocolate-fix:
+- chunk-loaders:
+- citadel:
+- cloth-config-forge:
+- clumps:
+- codechicken-lib-1-8:
+- cofh-core:
+- coloured-tooltips:
+- compact-machines:
+- connected-glass:
+- construction-wand:
+- controlling:
+- cooking-for-blockheads:
+- cosmetic-armor-reworked:
+- crafttweaker:
+- ctm:
+- create:
+- culinary-construct:
+- curio-of-undying:
+- curios:
+- curious-armor-stands:
+- curious-elytra:
+- curious-shulker-boxes:
+- dark-utilities:
+- dash:
+- decorative-blocks-modded-compat:
+- decorative-blocks:
+- draconic-evolution:
+- druidcraft:
+- effortless-building:
+- eidolon:
+- enchantment-descriptions:
+- ender-storage-1-8:
+- endergetic:
+- entangled:
+- extended-lights-mod:
+    id: 335051
+- extra-boats:
+- extra-disks:
+- extrastorage:
+- farmers-delight:
+- fast-leaf-decay:
+- fastfurnace:
+- fastworkbench-minus-replacement:
+- ferritecore:
+- flux-networks:
+- forbidden-arcanus:
+- forgiving-void:
+- ftb-backups-forge:
+- ftb-essentials-forge:
+- ftb-library-forge:
+- ftb-teams-forge:
+- ftb-ultimine-forge:
+- geckolib:
+- gravestone-mod:
+- hats:
+- immersive-engineering:
+- immersive-petroleum:
+- industrial-foregoing:
+- inventory-tweaks-renewed:
+- iron-chests:
+- jade:
+    url: https://github.com/kalkafox/Jade/releases/download/1.16-ci/Jade-1.16.4-2.8.0.jar
+- jamd:
+- jaopca:
+- jei:
+- jeitweaker:
+- just-enough-calculation:
+- kotlin-for-forge:
+- kubejs-blood-magic:
+- kubejs-create:
+- kubejs-immersive-engineering:
+- kubejs-mekanism:
+- kubejs-forge:
+- leap:
+- lumberjack:
+- macaws-paintings:
+- macaws-doors:
+- macaws-trapdoors:
+- macaws-fences-and-walls:
+- macaws-lights-and-lamps:
+- macaws-bridges:
+- macaws-windows:
+- macaws-furniture:
+- macaws-roofs:
+- mantle:
+- mcjtylib:
+- mekanism-additions:
+    url: https://github.com/kalkafox/Mekanism/releases/download/v10.1/MekanismAdditions-1.16.5-10.0.21.homebaked.jar
+- mekanism-generators:
+    url: https://github.com/kalkafox/Mekanism/releases/download/v10.1/MekanismGenerators-1.16.5-10.0.21.homebaked.jar
+- mekanism-tools:
+    url: https://github.com/kalkafox/Mekanism/releases/download/v10.1/MekanismTools-1.16.5-10.0.21.homebaked.jar
+- mekanism:
+    url: https://github.com/kalkafox/Mekanism/releases/download/v10.1/Mekanism-1.16.5-10.0.21.homebaked.jar
+- mgui:
+- mining-gadgets:
+- mmmmmmmmmmmm:
+- mob-grinding-utils:
+- more-sound-config:
+- morph-o-tool:
+- morpheus:
+- mystical-world:
+- natures-compass:
+- nethers-delight:
+- nomowanderer:
+- obfuscate:
+- observerlib:
+- oh-the-biomes-youll-go:
+- openblocks-elevator:
+- overloaded-armor-bar:
+- patchouli:
+- personality:
+- placebo:
+- polymorph:
+- productivebees:
+- project-red-core:
+    url: https://media.forgecdn.net/files/3459/382/ProjectRed-1.16.5-4.11.0-beta-0-core.jar
+- project-red-illumination:
+    url: https://media.forgecdn.net/files/3459/384/ProjectRed-1.16.5-4.11.0-beta-0-illumination.jar
+- project-red-transmission:
+    url: https://media.forgecdn.net/files/3459/386/ProjectRed-1.16.5-4.11.0-beta-0-transmission.jar
+- project-red-exploration:
+    url: https://media.forgecdn.net/files/3459/385/ProjectRed-1.16.5-4.11.0-beta-0-exploration.jar
+- project-red-integration:
+    url: https://media.forgecdn.net/files/3459/383/ProjectRed-1.16.5-4.11.0-beta-0-integration.jar
+- project-red-expansion:
+    url: https://github.com/MrTJP/ProjectRed/releases/download/v4.10/ProjectRed-1.16.5-4.10.0-expansion.jar
+- quark:
+- ranged-pumps:
+- refined-storage:
+- refined-storage-addons:
+- rftools-base:
+- rftools-builder:
+- rftools-power:
+- rftools-storage:
+- rftools-utility:
+- rhino:
+- runelic:
+- savage-and-ravage:
+- save-my-stronghold:
+- scannable:
+- scorge:
+- server-tab-info:
+- simple-farming:
+- simply-jetpacks-2:
+- simply-light:
+- simply-tea:
+- sit:
+- snow-under-trees:
+- space-bosstools:
+- step:
+- storage-for-computercraft:
+- tinkers-construct:
+- tellme:
+- terraforged:
+- tetra:
+- the-bumblezone-forge:
+- the-mighty-architect:
+- thermal-expansion:
+- thermal-foundation:
+- thermal-innovation:
+- thermal-locomotion:
+- titanium:
+- tool-belt:
+- torchmaster:
+- torchslabs-mod:
+- trash-cans:
+- trashslot:
+- travel-anchors:
+- upgrade-aquatic:
+- valhelsia-core:
+- valhelsia-structures:
+- valkyrielib:
+- waystones:
+- wither-skeleton-tweaks:
+- xaeros-minimap:
+- xaeros-world-map:
+- yungs-api:
+- yungs-better-caves:
+- yungs-better-mineshafts-forge:
+- zerocore:
+- botany-pots:
+- botany-trees:
+- cable-tiers:
+- cleancut:
+- crash-utilities:
+- creative-wireless-transmitter:
+- simply-backpacks:
+- dynamic-view:
+    serveronly: true
+- extreme-sound-muffler:
+- fastfurnace-minus-replacement:
+- rsinfinitybooster:
+- rs-requestify:
+- smooth-boot-forge:
+- tinkers-mechworks:
+- betterend-forge-port:
+- the-outer-end:
+- tetranomicon:
+- flickerfix:
+    clientonly: true
+- worldedit:
+    optional: true
+- pregenforge:
+    id: 323043
+    serveronly: true

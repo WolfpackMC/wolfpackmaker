@@ -1,33 +1,39 @@
 #!/usr/bin/env python3
 
-import aiohttp
 import argparse
 import asyncio
+import distutils
 import io
 import json
 import logging
 import owoify
-import distutils
 import platform
 import shutil
 import sys
 import time
 import zipfile
-
-
 from distutils.dir_util import copy_tree
-from os.path import dirname, abspath, exists, join
-from os import remove, getcwd, listdir
+from os import getcwd, listdir, remove
+from os.path import abspath, dirname, exists, join
 from pathlib import Path
 from pyfiglet import Figlet
-from rich.traceback import install as init_traceback
+
+import aiohttp
 from rich.logging import RichHandler
 from rich.progress import Progress
+from rich.traceback import install as init_traceback
+
+from util.fancy_intro import fancy_intro
 
 log = logging.getLogger("rich")
 
 class Wolfpackmaker:
-    VERSION = f'0.2.0'
+    VERSION = f'0.3.0'
+    DATE = 1633053812
+
+    @staticmethod
+    def get_version(self):
+        return self.VERSION
 
 headers = {
     'User-Agent': 'Wolfpackmaker (https://woofmc.xyz)'
@@ -39,6 +45,21 @@ macos_incompatible_mods = [
 
 meme_activated = True
 
+def fancy_intro(log):
+    f = Figlet()
+    log.info(str('').join(['####' for _ in range(16)]))
+    log.info(f.renderText(("woofmc.xyz")))
+    import random
+    keywords = random.choice(
+        ['A custom made Minecraft modpack script. Nothing special, hehe.',
+         'Please don\'t tell anyone about this...',
+         'Hehe. UwU, It\'s all we have, I know. I\'m sorry!',
+         'I should probably get a better idea for this list...',
+         'Not sponsored by Awoos!'
+         ]
+    )
+    log.info(owoify.owoify(keywords))
+    log.info(str('').join(['####' for _ in range(16)]))
 
 def parse_args(parser):
     args = parser.parse_args()
@@ -84,21 +105,6 @@ config_dir = join(parent_dir, '.minecraft/config')
 cached_dir = join(parent_dir, '.wolfpackmaker')
 mods_cached = join(cached_dir, '.cached_mods.json')
 modpack_version_cached = join(cached_dir, '.modpack_version.txt')
-
-
-def fancy_intro():
-    f = Figlet()
-    log.info(str('').join(['####' for _ in range(16)]))
-    log.info(f.renderText(("woofmc.xyz")))
-    import random
-    keywords = random.choice(
-        ['A custom made Minecraft modpack script. Nothing special, hehe.',
-         'Please don\'t tell anyone about this...',
-         'Hehe. UwU, It\'s all we have, I know. I\'m sorry!'
-         ]
-    )
-    log.info(owoify.owoify(keywords))
-    log.info(str('').join(['####' for _ in range(16)]))
 
 
 async def save_mod(mod_filename, mod_downloadurl, session):
@@ -345,7 +351,7 @@ def main():
     init_traceback()
     create_folders()
     assemble_logger(args.verbose)
-    fancy_intro()
+    fancy_intro(log)
     log.info(f"Wolfpackmaker / {Wolfpackmaker.VERSION}")
     loop = asyncio.get_event_loop()
     # TODO: Server support, this is the Oil Ocean Zone of Wolfpackmaker :^)

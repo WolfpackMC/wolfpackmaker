@@ -20,6 +20,8 @@ jobs:
       - run: python3 util/curseforgedb.py
       - run: python3 util/lock.py -m tests/manifest-fabric.yml
       - run: python3 util/lock.py -m tests/manifest-forge.yml
+      - run: python3 util/lock.py -m tests/manifest-1.7.10.yml
+      - run: python3 util/lock.py -m tests/manifest-1.16.5.yml
 
   docker-build:
     runs-on: self-hosted

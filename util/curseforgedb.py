@@ -3,9 +3,9 @@ import asyncio
 import json
 import logging
 
-from pyfiglet import Figlet
 from rich.logging import RichHandler
 from rich.traceback import install as init_traceback
+from fancy_intro import fancy_intro
 
 # noinspection PyArgumentList
 logging.basicConfig(
@@ -13,13 +13,6 @@ logging.basicConfig(
 )
 
 headers = {'User-Agent':'wolfpackmaker/0.3.0 (made by Kalka) business inquiries: b@kalka.io'}
-
-
-def fancy_intro(log):
-    f = Figlet().renderText("woofmc.xyz")
-    log.info(str('').join(['####' for _ in range(16)]))
-    log.info(f)
-    log.info(str('').join(['####' for _ in range(16)]))
 
 
 async def get_curseforge_api(session, index, page_size, log, version=None):
@@ -32,6 +25,11 @@ async def get_curseforge_api(session, index, page_size, log, version=None):
 
 versions = [
     "1.16.5",
+    "1.16.4",
+    "1.16.3",
+    "1.16.2",
+    "1.16.1",
+    "1.16",
     "1.12.2",
     "1.7.10"
 ]
