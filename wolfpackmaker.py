@@ -23,8 +23,6 @@ from rich.logging import RichHandler
 from rich.progress import Progress
 from rich.traceback import install as init_traceback
 
-from util.fancy_intro import fancy_intro
-
 log = logging.getLogger("rich")
 
 class Wolfpackmaker:
