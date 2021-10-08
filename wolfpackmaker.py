@@ -255,8 +255,6 @@ async def get_mods(clientonly=False, serveronly=False):
             log.info("Already saved modpack version...")
             continue
         cached_mods.append(k)
-    if modpack_version != cached_modpack_version['id']:
-        log.info(f"Saving modpack version {modpack_version}...")
     cached_mods.append({'id': modpack_version, 'mods': new_mods})
     if 'darwin' in platform.version().lower():
         if meme_activated:
@@ -289,8 +287,7 @@ async def get_mods(clientonly=False, serveronly=False):
                 to_process.append(filename)
                 download_url = m.get("downloadUrl")
                 if not args.singlethread:
-                    task = asyncio.ensure_future(save_mod(filename, download_url, session))
-                    tasks.append(task)
+                    tasks.append([filename, download_url])
                 else:
                     save_mod_sync(filename, download_url)
                     log.info(f"Downloaded {download_url}.")
@@ -300,8 +297,10 @@ async def get_mods(clientonly=False, serveronly=False):
             total = len(to_process)
             download_task = progress.add_task(description=f"Preparing to download...", total=total)
             processed = 0
-            for coro in asyncio.as_completed(tasks):
-                filename = await coro
+            for file in tasks:
+                filename = asyncio.create_task(save_mod(file[0], file[1], session))
+                await filename
+                filename = filename.result()
                 processed += 1
                 to_process.remove(filename)
                 progress.update(download_task, description=f"Downloaded {filename}. ({processed}/{total})", advance=1)
