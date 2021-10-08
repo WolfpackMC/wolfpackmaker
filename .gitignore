@@ -4,6 +4,7 @@ manifest.lock
 wolfpackmaker_build
 curseforge.db
 manifest.yml
+manifest.json
 .idea
 
 ### Python ###

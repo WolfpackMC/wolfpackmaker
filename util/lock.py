@@ -1,3 +1,4 @@
+import io
 import aiohttp
 import argparse
 import asyncio
@@ -111,9 +112,16 @@ async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest, cf_data
         for i in range(1, 5):
             mc_version.append(f"1.16.{i}")
     file_found = False
+
+    try:
+        latest_files = mod['latest_files']
+    except KeyError:
+        latest_files = mod['gameVersionLatestFiles']
     
-    for version in mod.get("latest_files"):
-            file = await get_mod_file(curseforge_url, modpack_manifest, version, mc_version, mod, session, file_found)
+    for version in latest_files:
+            file = asyncio.create_task(get_mod_file(curseforge_url, modpack_manifest, version, mc_version, mod, session, file_found))
+            await file
+            file = file.result()
             if not file: continue
             file_found = True
             deps = []
@@ -143,7 +151,7 @@ async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest, cf_data
                 if m.get("id") == mod.get("id"):
                     m.update({'downloadUrl': file.get('downloadUrl'), 'filename': file.get('fileName')})
     completed[0] += 1
-    log.info(f"[{completed[0]}/{to_complete[0]}] {mod.get('name')} took {time.time() - start_time:.3f} seconds.")
+    log.info(f"[LOCK] [{completed[0]}/{to_complete[0]}] {mod.get('name')} took {time.time() - start_time:.3f} seconds.")
     if not file_found:
         log.warning(
             f"Mod {mod.get('slug')} [{mod.get('name')}] does not have an apparent version for {mc_version}, tread with caution")
@@ -171,142 +179,101 @@ async def process_modpack_config():
             duplicate_mods.append(k)
     if [k for k,v in Counter(duplicate_mods).items() if v>1]:
         sys.exit(log.error(f"Found duplicates in the manifest file. Please remove them before continuing:\n> {[k for k,v in Counter(duplicate_mods).items() if v>1]}"))
-
-    
     curseforge_download_url = "https://get.kalka.io/curseforge.json"
     session = aiohttp.ClientSession()
     log.debug(f"Established session {session}")
     log.info(f"Reading CurseForge data from {curseforge_download_url}")
+    start_time = time.time()
     async with session.get(curseforge_download_url) as r:
         date = datetime.datetime.strptime(r.headers.get("last-modified"), "%a, %d %b %Y %H:%M:%S %Z")
         log.info(f"CurseForge DB date is {datetime.datetime.strftime(date, '%B %d, %Y at %H:%M:%Sz')}")
         if chunked:
             log.info("Reading chunked data... (it's probably big)")
-            data = bytes()
+            data = io.BytesIO()
             async for c in r.content.iter_chunked(65535):
-                data += c
+                data.write(c)
+            data.seek(0)
+            curseforge_data = json.loads(data.read())
         else:
             data = await r.read()
-        curseforge_data = json.loads(data)
+            curseforge_data = json.loads(data)
+    log.info(f"Took {time.time() - start_time:.2f}s. {len(curseforge_data)} mods recognized.")
     tasks = []
     to_complete = [0]
     completed = [0]
-    from rich import inspect
     for idx, mod in enumerate(mods):
         for k, v in mods[idx].items():
-            found = False
-            if v is not None:
-                try:
-                    custom_url = v.get("url")
-                except AttributeError:
-                    custom_url = None
-                if custom_url is not None:
-                    found_id = None
-                    found_name = k
-                    for m in curseforge_data:
-                        # Double-check if the custom URL exists in curseforge DB, but DON'T push download data
-                        if k == m.get("slug"):
-                            found_id = m.get("id")
-                            found_name = m.get("name")
-                            found_slug = m.get("slug")
-                    clientonly = False
-                    serveronly = False
-                    optional = False
-                    if v.get("optional"):
-                        optional = True
-                    if v.get("clientonly"):
-                        clientonly = True
-                    if v.get("serveronly"):
-                        serveronly = True
-                    found_mods.append({
-                        "id": found_id or None,
-                        "name": found_name or k,
-                        "slug": k,
-                        "filename": '=' in v.get("url") and v.get("url").split("=")[1] or basename(v.get("url")),
-                        "downloadUrl": v.get("url"),
-                        "clientonly": clientonly,
-                        "serveronly": serveronly,
-                        "optional": optional,
-                        "custom": True
-                    })
-                    log.info(f"Using custom URL {v.get('url')} for mod {found_name}" + (
-                                found_id and f" (found in Curseforge DB as {found_name})" or ""))
-            for m in curseforge_data:
-                try:
-                    custom_url = v.get("url")
-                except AttributeError:
-                    custom_url = None
-                if k == m.get("slug") and custom_url is None:
-                    log.info(f"Resolved {m.get('name')}! [{m.get('slug')}] [{m.get('id')}]")
-                    found = True
-                    optional = False
-                    clientonly = False
-                    serveronly = False
-                    if v is not None:
-                        if v.get("optional"):
-                            optional = True
-                        if v.get("clientonly"):
-                            clientonly = True
-                        if v.get("serveronly"):
-                            serveronly = True
-                    found_mods.append({
-                        "id": m.get("id"),
-                        "slug": m.get("slug"),
-                        "name": m.get("name"),
-                        "clientonly": clientonly,
-                        "serveronly": serveronly,
-                        "optional": optional
-                    })
-                    task = asyncio.create_task(fetch_mod_data(curseforge_url, m, session, modpack_manifest, curseforge_data, completed, to_complete))
-                    tasks.append(task)
-            if not found:
-                try:
-                    custom_url = v.get("url")
-                    optional = v.get("optional")
-                    clientonly = v.get("clientonly")
-                    serveronly = v.get("serveronly")
-                    id = v.get("id")
-                except AttributeError:
-                    clientonly = False
-                    serveronly = False
-                    custom_url = None
-                    optional = None
-                    id = None
-                if not custom_url:
-                    if args.nomodleftbehind:
-                        if id:
+            client_only, server_only, optional = False, False, False
+            match v:
+                case {'clientonly': True}:
+                    client_only = True
+                case {'serveronly': True}:
+                    server_only = True
+                case {'optional': True}:
+                    optional = True
+            not_found_msg = f'This happened because we exhausted all efforts to search for {k}, and the only info we know about it is the mod slug, which is just {k}. The easiest fix to this is to visit https://www.curseforge.com/minecraft/mc-mods/{k} and copy the value of "Project ID", and append it to the corresponding mod in the yaml manifest, e.g:\n- {k}:\n    id: <id>... \nThe script will continue and disregard this specific mod, but it will be considered a mod we cannot digest!'
+            finished_suffix = " (took {:.2f} seconds)"
+            start_time
+            mod_data = [m for m in curseforge_data if k == m['slug']]
+            if mod_data:
+                custom = []
+                match v:
+                    case {'url': url}:
+                        found_mods.append({
+                            "id": mod_data[0]['id'] or None,
+                            "name": mod_data[0]['name'] or k,
+                            "slug": k,
+                            # the = is for optifine
+                            "filename": '=' in url and url.split("=")[1] or basename(url),
+                            "downloadUrl": url,
+                            "clientonly": client_only,
+                            "serveronly": server_only,
+                            "optional": optional,
+                            "custom": True
+                        })
+                        to_complete[0] += 1
+                        completed[0] += 1
+                        log.info(f"[LOCK] [{completed[0]}/{to_complete[0]}] Resolved {mod_data[0]['name']}, using custom URL {url}")
+                        custom.append(True)
+                if custom: continue
+                log.info(f"[MATCH] [{completed[0]}/{to_complete[0]}] Resolved {mod_data[0]['name']} {finished_suffix.format(time.time() - start_time)}!")
+                found_mods.append({
+                    "id": mod_data[0]['id'] or None,
+                    "name": mod_data[0]['name'] or k,
+                    "slug": k,
+                    "clientonly": client_only,
+                    "serveronly": server_only,
+                    "optional": optional
+                })
+                task = asyncio.create_task(fetch_mod_data(curseforge_url, mod_data[0], session, modpack_manifest, curseforge_data, completed, to_complete))
+                tasks.append(task)
+                to_complete[0] += 1
+            else:
+                match v:
+                    case {'id': id}:
                             log.info(f"Using {id} for {k}. This should guarantee a positive match.")
                             cf_get = await session.get(curseforge_url + str(id))
                             data = await cf_get.json()
-                            if k != data.get("slug"):
-                                sys.exit(log.critical(f"Mod mismatch! {k} =/= {data.get('slug')}. This is usually impossible unless you are using the wrong mod ID."))
-                            log.info(f"Resolved {k} as {data.get('slug')} through CurseForge! [{data.get('name')}] [{data.get('id')}]")
-                            found = True
-                            mod_found = {
-                                "id": data.get("id"),
-                                "slug": data.get("slug"),
-                                "name": data.get("name"),
-                                "latest_files": data.get("gameVersionLatestFiles")
-                            }
-                        else:
-                            mod_found = await search_mod(curseforge_url, k, session)
-                        if mod_found is None:
-                            log.critical(f'{k} was not found in CurseForge API. Sorry.')
-                            log.critical(f'This happened because we exhausted all efforts to search for {k}, and the only info we know about it is the mod slug, which is just {k}. The easiest fix to this is to visit https://www.curseforge.com/minecraft/mc-mods/{k} and copy the value of "Project ID", and append it to the corresponding mod in the yaml manifest, e.g:\n- {k}:\n    id: <id>... \nThe script will continue and disregard this specific mod, but it will be considered a mod we cannot digest!')
-                            to_complete[0] -= 1
-                            continue
-                        found_mods.append({
-                            "id": mod_found.get("id"),
-                            "slug": mod_found.get("slug"),
-                            "name": mod_found.get("name"),
-                            "clientonly": clientonly,
-                            "serveronly": serveronly,
-                            "optional": optional
-                        })
-                        task = asyncio.create_task(fetch_mod_data(curseforge_url, mod_found, session, modpack_manifest, curseforge_data, completed, to_complete))
-                        tasks.append(task)
-            if found:
-                to_complete[0] += 1
+                            if k != data['slug']:
+                                sys.exit(log.critical(f"Mod mismatch! {k} =/= {data['slug']}. This is usually impossible unless you are using the wrong mod ID."))
+                            log.info(f"[MATCH] [{completed[0]}/{to_complete[0]}] Resolved {data['name']} through CurseForge!")
+                            found_mods.append({
+                                "id": data['id'],
+                                "slug": data['slug'],
+                                "name": data['name'],
+                                "clientonly": client_only,
+                                "serveronly": server_only,
+                                "optional": optional
+                            })
+                            task = asyncio.create_task(fetch_mod_data(curseforge_url, data, session, modpack_manifest, curseforge_data, completed, to_complete))
+                            tasks.append(task)
+                            to_complete[0] += 1
+                    case None:
+                        log.info(f"{k} was not found. {not_found_msg}")
+                        continue
+            if not mod_data:
+                continue
+
     await asyncio.gather(*tasks)
     await session.close()
 

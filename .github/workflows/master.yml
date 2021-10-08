@@ -11,10 +11,15 @@ jobs:
     runs-on: self-hosted
 
     container:
-      image: archlinux
+      image: archlinux:base-devel
     steps:
       - uses: actions/checkout@v2
-      - run: pacman -Syyu --noconfirm python3
+      - run: pacman -Syyu --noconfirm git
+      - run: git clone https://github.com/python/cpython.git
+      - run: cd cpython
+      - run: ./configure --enable-optimizations
+      - run: make -j8
+      - run: make install
       - run: python3 -m ensurepip
       - run: python3 -m pip install -r requirements.txt
       - run: python3 util/curseforgedb.py

@@ -9,6 +9,7 @@ mods:
 - mrtjpcore:
 - agricraft:
 - another-one-bites-the-dust:
+    id: 221863
 - applied-energistics-2:
 - aroma1997core:
 - aroma1997s-dimensional-world:
@@ -65,7 +66,9 @@ mods:
 - guide-api:
 - hats:
 - hat-stand:
+    id: 229076
 - headcrumbs:
+    id: 222838
 - nuclear-control-2:
 - ichunutil:
 - immersive-engineering:
@@ -90,6 +93,7 @@ mods:
 - natura:
 - nei-addons:
 - nei-integration:
+    id: 225251
 - netherores:
 - notenoughitems:
 - notenoughresources:
@@ -112,13 +116,14 @@ mods:
 - rftools:
 - runic-dungeons:
 - simply-jetpacks:
+    id: 79325
 - solar-expansion:
-      id: 223583
+    id: 223583
 - springboards:
 - steves-addons:
 - steves-carts-2:
 - steves-factory-manager:
-      id: 228626
+    id: 228626
 - steves-workshop:
 - storage-drawers:
 - storage-drawers-biomes-o-plenty-pack:
