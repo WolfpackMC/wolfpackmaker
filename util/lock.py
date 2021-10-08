@@ -217,10 +217,10 @@ async def process_modpack_config():
             try:
                 mod_data = [m for m in curseforge_data if k == m['slug']][0]
             except IndexError:
-                mod_data[0] = {
+                mod_data = [{
                     "id": None,
                     "name": k
-                }
+                }]
             custom = []
             match v:
                 case {'url': url}:
