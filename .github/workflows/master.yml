@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: pacman -Syyu --noconfirm git
-      - run: git clone https://github.com/python/cpython.git
+      - run: git clone https://github.com/python/cpython.git -b 3.10
       - run: cd cpython
       - run: ./configure --enable-optimizations
       - run: make -j8
