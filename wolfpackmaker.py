@@ -12,7 +12,7 @@ import shutil
 import sys
 import time
 import zipfile
-from setuptools._distutils.dir_util import copy_tree
+from distutils.dir_util import copy_tree
 from os import getcwd, listdir, remove
 from os.path import abspath, dirname, exists, join
 from pathlib import Path
