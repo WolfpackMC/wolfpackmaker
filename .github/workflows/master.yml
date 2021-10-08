@@ -14,11 +14,12 @@ jobs:
       image: archlinux:base-devel
     steps:
       - uses: actions/checkout@v2
-      - run: pacman -Syyu --noconfirm git
-      - run: git clone https://github.com/python/cpython.git -b 3.10
-      - run: cd cpython
-      - run: /cpython/configure --enable-optimizations
-      - run: make -C cpython -j8
+      - run: pacman -Syyu --noconfirm curl
+      - run: curl -L https://www.python.org/ftp/python/3.10.0/Python-3.10.0.tgz > python.tgz
+      - run: tar -zxvf python.tgz
+      - run: cd Python-3.10.0
+      - run: bash /Python-3.10.0/configure --enable-optimizations
+      - run: make -C Python-3.10.0 -j8
       - run: make install
       - run: python3 -m ensurepip
       - run: python3 -m pip install -r requirements.txt
