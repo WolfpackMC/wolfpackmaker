@@ -17,8 +17,8 @@ jobs:
       - run: pacman -Syyu --noconfirm curl
       - run: curl -L https://www.python.org/ftp/python/3.10.0/Python-3.10.0.tgz > python.tgz
       - run: tar -zxvf python.tgz
-      - run: cd Python-3.10.0
-      - run: bash /Python-3.10.0/configure --enable-optimizations
+      - run: ./configure --enable-optimizations
+        working-directory: Python-3.10.0
       - run: make -C Python-3.10.0 -j8
       - run: make install
       - run: python3 -m ensurepip
