@@ -18,5 +18,7 @@ RUN make install
 
 RUN python3 -m ensurepip
 
+WORKDIR /
+
 RUN python3 -m pip install -r requirements.txt
 
