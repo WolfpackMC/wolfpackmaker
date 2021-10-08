@@ -215,27 +215,27 @@ async def process_modpack_config():
             finished_suffix = " (took {:.2f} seconds)"
             start_time
             mod_data = [m for m in curseforge_data if k == m['slug']]
+            custom = []
+            match v:
+                case {'url': url}:
+                    found_mods.append({
+                        "id": mod_data[0]['id'] or None,
+                        "name": mod_data[0]['name'] or k,
+                        "slug": k,
+                        # the = is for optifine
+                        "filename": '=' in url and url.split("=")[1] or basename(url),
+                        "downloadUrl": url,
+                        "clientonly": client_only,
+                        "serveronly": server_only,
+                        "optional": optional,
+                        "custom": True
+                    })
+                    to_complete[0] += 1
+                    completed[0] += 1
+                    log.info(f"[LOCK] [{completed[0]}/{to_complete[0]}] Resolved {mod_data[0]['name']}, using custom URL {url}")
+                    custom.append(True)
+            if custom: continue
             if mod_data:
-                custom = []
-                match v:
-                    case {'url': url}:
-                        found_mods.append({
-                            "id": mod_data[0]['id'] or None,
-                            "name": mod_data[0]['name'] or k,
-                            "slug": k,
-                            # the = is for optifine
-                            "filename": '=' in url and url.split("=")[1] or basename(url),
-                            "downloadUrl": url,
-                            "clientonly": client_only,
-                            "serveronly": server_only,
-                            "optional": optional,
-                            "custom": True
-                        })
-                        to_complete[0] += 1
-                        completed[0] += 1
-                        log.info(f"[LOCK] [{completed[0]}/{to_complete[0]}] Resolved {mod_data[0]['name']}, using custom URL {url}")
-                        custom.append(True)
-                if custom: continue
                 log.info(f"[MATCH] [{completed[0]}/{to_complete[0]}] Resolved {mod_data[0]['name']} {finished_suffix.format(time.time() - start_time)}!")
                 found_mods.append({
                     "id": mod_data[0]['id'] or None,
