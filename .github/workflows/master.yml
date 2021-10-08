@@ -17,8 +17,8 @@ jobs:
       - run: pacman -Syyu --noconfirm git
       - run: git clone https://github.com/python/cpython.git -b 3.10
       - run: cd cpython
-      - run: ./configure --enable-optimizations
-      - run: make -j8
+      - run: /cpython/configure --enable-optimizations
+      - run: make -C cpython -j8
       - run: make install
       - run: python3 -m ensurepip
       - run: python3 -m pip install -r requirements.txt
