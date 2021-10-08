@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
+import aiohttp
 import argparse
 import asyncio
-import distutils
 import io
 import json
 import logging
@@ -12,13 +12,11 @@ import shutil
 import sys
 import time
 import zipfile
-from distutils.dir_util import copy_tree
+from setuptools._distutils.dir_util import copy_tree
 from os import getcwd, listdir, remove
 from os.path import abspath, dirname, exists, join
 from pathlib import Path
 from pyfiglet import Figlet
-
-import aiohttp
 from rich.logging import RichHandler
 from rich.progress import Progress
 from rich.traceback import install as init_traceback
@@ -219,7 +217,7 @@ async def get_mods(clientonly=False, serveronly=False):
                 if exists(join(cached_config_dir, c)):
                     log.info(f"Ignoring {c}...")
                     remove(join(cached_config_dir, c))
-            log.info("Moving new config to directory...")
+            log.info("Copying new config to directory...")
             copy_tree(cached_config_dir, config_dir)
             if exists(join(cached_config_dir, 'mmc-pack.json')):
                 log.info("Copying MultiMC JSON files...")
@@ -244,25 +242,20 @@ async def get_mods(clientonly=False, serveronly=False):
         with open(mods_cached, 'r') as f:
             cached_mod_ids = json.loads(f.read())
     new_mods = [m.get("filename") for m in mods]
-    cached_modpack_version = str()
+    try:
+        cached_modpack_version = cached_mod_ids[-1]
+    except IndexError:
+        cached_modpack_version = {'mods': []}
     if args.multimc:
-        for cm in cached_mod_ids:
-            try:
-                cached_modpack_version = cm.get("id")
-                if cached_modpack_version == modpack_version:
-                    for f in cm.get("mods"):
-                        if f not in new_mods:
-                            log.info("Flagging {} for update...".format(f))
-                            filedir = join(mods_dir, f)
-                            if exists(filedir):
-                                remove(filedir)
-                            else:
-                                log.warning(f"{filedir} does not exist... why?")
-                    continue
-                cached_mods.append(cm)
-            except AttributeError:
-                cached_modpack_version = 'none'
-    if modpack_version != cached_modpack_version:
+        for cm in cached_modpack_version['mods']:
+            if cm not in new_mods:
+                log.info(f"{cm}: Flagged for update")
+    for k in cached_mod_ids:
+        if k['id'] == modpack_version:
+            log.info("Already saved modpack version...")
+            continue
+        cached_mods.append(k)
+    if modpack_version != cached_modpack_version['id']:
         log.info(f"Saving modpack version {modpack_version}...")
     cached_mods.append({'id': modpack_version, 'mods': new_mods})
     if 'darwin' in platform.version().lower():
@@ -352,7 +345,6 @@ def main():
     fancy_intro(log)
     log.info(f"Wolfpackmaker / {Wolfpackmaker.VERSION}")
     loop = asyncio.get_event_loop()
-    # TODO: Server support, this is the Oil Ocean Zone of Wolfpackmaker :^)
     try:
         loop.run_until_complete(
             get_mods(clientonly=args.clientonly, serveronly=args.serveronly))  # The todo is for this purpose
