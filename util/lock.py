@@ -214,7 +214,13 @@ async def process_modpack_config():
             not_found_msg = f'This happened because we exhausted all efforts to search for {k}, and the only info we know about it is the mod slug, which is just {k}. The easiest fix to this is to visit https://www.curseforge.com/minecraft/mc-mods/{k} and copy the value of "Project ID", and append it to the corresponding mod in the yaml manifest, e.g:\n- {k}:\n    id: <id>... \nThe script will continue and disregard this specific mod, but it will be considered a mod we cannot digest!'
             finished_suffix = " (took {:.2f} seconds)"
             start_time
-            mod_data = [m for m in curseforge_data if k == m['slug']]
+            try:
+                mod_data = [m for m in curseforge_data if k == m['slug']][0]
+            except IndexError:
+                mod_data[0] = {
+                    "id": None,
+                    "name": k
+                }
             custom = []
             match v:
                 case {'url': url}:
