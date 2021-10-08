@@ -16,11 +16,13 @@ jobs:
       - uses: actions/checkout@v2
       - run: pacman -Syyu --noconfirm curl
       - run: curl -L https://www.python.org/ftp/python/3.10.0/Python-3.10.0.tgz > python.tgz
-      - run: tar -zxvf python.tgz
-      - run: ./configure --enable-optimizations
+      - run: tar -zxf python.tgz
+      - run: ./configure
         working-directory: Python-3.10.0
-      - run: make -C Python-3.10.0 -j8
+      - run: make -j8
+        working-directory: Python-3.10.0
       - run: make install
+        working-directory: Python-3.10.0
       - run: python3 -m ensurepip
       - run: python3 -m pip install -r requirements.txt
       - run: python3 util/curseforgedb.py
