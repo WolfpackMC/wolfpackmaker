@@ -215,7 +215,7 @@ async def process_modpack_config():
             finished_suffix = " (took {:.2f} seconds)"
             start_time
             try:
-                mod_data = [m for m in curseforge_data if k == m['slug']][0]
+                mod_data = [m for m in curseforge_data if k == m['slug']]
             except IndexError:
                 mod_data = [{
                     "id": None,
