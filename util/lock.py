@@ -215,18 +215,18 @@ async def process_modpack_config():
             finished_suffix = " (took {:.2f} seconds)"
             start_time
             try:
-                mod_data = [m for m in curseforge_data if k == m['slug']]
+                mod_data = [m for m in curseforge_data if k == m['slug']][0]
             except IndexError:
                 mod_data = [{
                     "id": None,
                     "name": k
-                }]
+                }][0]
             custom = []
             match v:
                 case {'url': url}:
                     found_mods.append({
-                        "id": mod_data[0]['id'] or None,
-                        "name": mod_data[0]['name'] or k,
+                        "id": mod_data['id'] or None,
+                        "name": mod_data['name'] or k,
                         "slug": k,
                         # the = is for optifine
                         "filename": '=' in url and url.split("=")[1] or basename(url),
@@ -238,20 +238,20 @@ async def process_modpack_config():
                     })
                     to_complete[0] += 1
                     completed[0] += 1
-                    log.info(f"[LOCK] [{completed[0]}/{to_complete[0]}] Resolved {mod_data[0]['name']}, using custom URL {url}")
+                    log.info(f"[LOCK] [{completed[0]}/{to_complete[0]}] Resolved {mod_data['name']}, using custom URL {url}")
                     custom.append(True)
             if custom: continue
             if mod_data:
-                log.info(f"[MATCH] [{completed[0]}/{to_complete[0]}] Resolved {mod_data[0]['name']} {finished_suffix.format(time.time() - start_time)}!")
+                log.info(f"[MATCH] [{completed[0]}/{to_complete[0]}] Resolved {mod_data['name']} {finished_suffix.format(time.time() - start_time)}!")
                 found_mods.append({
-                    "id": mod_data[0]['id'] or None,
-                    "name": mod_data[0]['name'] or k,
+                    "id": mod_data['id'] or None,
+                    "name": mod_data['name'] or k,
                     "slug": k,
                     "clientonly": client_only,
                     "serveronly": server_only,
                     "optional": optional
                 })
-                task = asyncio.create_task(fetch_mod_data(curseforge_url, mod_data[0], session, modpack_manifest, curseforge_data, completed, to_complete))
+                task = asyncio.create_task(fetch_mod_data(curseforge_url, mod_data, session, modpack_manifest, curseforge_data, completed, to_complete))
                 tasks.append(task)
                 to_complete[0] += 1
             else:
