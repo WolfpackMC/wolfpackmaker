@@ -6,6 +6,7 @@ import asyncio
 import io
 import json
 import logging
+from aiohttp.client_exceptions import ClientResponseError
 import owoify
 import platform
 import shutil
@@ -104,10 +105,15 @@ modpack_version_cached = join(cached_dir, '.modpack_version.txt')
 
 
 async def save_mod(mod_filename, mod_downloadurl, session):
-    async with session.get(mod_downloadurl) as r:
-        with open(join(mods_cache_dir, mod_filename), 'wb') as f:
-            async for data in r.content.iter_chunked(65535):
-                f.write(data)
+    try:
+        async with session.get(mod_downloadurl) as r:
+            with open(join(mods_cache_dir, mod_filename), 'wb') as f:
+                async for data in r.content.iter_chunked(65535):
+                    f.write(data)
+    except ClientResponseError as e:
+        log.info(f"We were not able to download {mod_downloadurl} due to the ClientResponseError: {e}. We will retry the download using urllib3 (no guarantees)")
+        await asyncio.sleep(3)
+        save_mod_sync(mod_filename, mod_downloadurl)
 
 def save_mod_sync(mod_filename, mod_downloadurl):
     import urllib3
