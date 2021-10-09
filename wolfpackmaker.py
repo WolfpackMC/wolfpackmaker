@@ -108,8 +108,6 @@ async def save_mod(mod_filename, mod_downloadurl, session):
         with open(join(mods_cache_dir, mod_filename), 'wb') as f:
             async for data in r.content.iter_chunked(65535):
                 f.write(data)
-    return mod_filename
-
 
 def save_mod_sync(mod_filename, mod_downloadurl):
     import urllib3
@@ -298,10 +296,11 @@ async def get_mods(clientonly=False, serveronly=False):
             download_task = progress.add_task(description=f"Preparing to download...", total=total)
             processed = 0
             for file in tasks:
-                filename = await save_mod(file[0], file[1], session)
+                progress.update(download_task, description=f"Preparing to download {file[0]}... ({processed}/{total})", advance=0)
+                await save_mod(file[0], file[1], session)
                 processed += 1
-                to_process.remove(filename)
-                progress.update(download_task, description=f"Downloaded {filename}. ({processed}/{total})", advance=1)
+                to_process.remove(file[0])
+                progress.update(download_task, description=f"Downloaded {file[0]}. ({processed}/{total})", advance=1)
     else:
         log.debug("We do not have any mods to process.")
     await session.close()
