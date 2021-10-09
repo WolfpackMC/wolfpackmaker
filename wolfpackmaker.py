@@ -104,7 +104,7 @@ mods_cached = join(cached_dir, '.cached_mods.json')
 modpack_version_cached = join(cached_dir, '.modpack_version.txt')
 
 
-async def save_mod(mod_filename, mod_downloadurl, session=aiohttp.ClientSession()):
+async def save_mod(mod_filename, mod_downloadurl, session):
     try:
         async with session.get(mod_downloadurl) as r:
             with open(join(mods_cache_dir, mod_filename), 'wb') as f:
@@ -191,7 +191,7 @@ def create_folders():
 
 
 async def get_mods(clientonly=False, serveronly=False):
-    session = aiohttp.ClientSession(headers=headers)
+    session = aiohttp.ClientSession(headers=headers, connector=aiohttp.TCPConnector(verify_ssl=False))
     modpack_version = ''
     if args.repo is not None and not '.lock' in args.repo:
         assets_list, modpack_version = await get_github_data(session)
