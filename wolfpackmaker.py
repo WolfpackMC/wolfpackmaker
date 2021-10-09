@@ -104,16 +104,17 @@ mods_cached = join(cached_dir, '.cached_mods.json')
 modpack_version_cached = join(cached_dir, '.modpack_version.txt')
 
 
-async def save_mod(mod_filename, mod_downloadurl, session):
-    try:
-        async with session.get(mod_downloadurl) as r:
-            with open(join(mods_cache_dir, mod_filename), 'wb') as f:
-                async for data in r.content.iter_chunked(65535):
-                    f.write(data)
-    except ClientResponseError as e:
-        log.info(f"We were not able to download {mod_downloadurl} due to the ClientResponseError: {e}. We will retry the download using urllib3 (no guarantees)")
-        await asyncio.sleep(3)
-        save_mod_sync(mod_filename, mod_downloadurl)
+async def save_mod(mod_filename, mod_downloadurl, session=aiohttp.ClientSession()):
+    async with session.get(mod_downloadurl) as r:
+        try:
+            r.raise_for_status()
+        except ClientResponseError as e:
+            log.info(f"We were not able to download {mod_downloadurl} due to the ClientResponseError: {e}. We will retry the download using urllib3 (no guarantees)")
+            await asyncio.sleep(3)
+            save_mod_sync(mod_filename, mod_downloadurl)
+        with open(join(mods_cache_dir, mod_filename), 'wb') as f:
+            async for data in r.content.iter_chunked(65535):
+                f.write(data)
 
 def save_mod_sync(mod_filename, mod_downloadurl):
     import urllib3
