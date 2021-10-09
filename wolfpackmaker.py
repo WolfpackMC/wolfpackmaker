@@ -298,9 +298,7 @@ async def get_mods(clientonly=False, serveronly=False):
             download_task = progress.add_task(description=f"Preparing to download...", total=total)
             processed = 0
             for file in tasks:
-                filename = asyncio.create_task(save_mod(file[0], file[1], session))
-                await filename
-                filename = filename.result()
+                filename = await save_mod(file[0], file[1], session)
                 processed += 1
                 to_process.remove(filename)
                 progress.update(download_task, description=f"Downloaded {filename}. ({processed}/{total})", advance=1)
