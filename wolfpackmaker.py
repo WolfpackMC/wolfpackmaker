@@ -6,7 +6,7 @@ import asyncio
 import io
 import json
 import logging
-from aiohttp.client_exceptions import ClientResponseError
+from aiohttp.client_exceptions import ClientConnectorCertificateError, ClientResponseError
 import owoify
 import platform
 import shutil
@@ -108,7 +108,7 @@ async def save_mod(mod_filename, mod_downloadurl, session=aiohttp.ClientSession(
     async with session.get(mod_downloadurl) as r:
         try:
             r.raise_for_status()
-        except ClientResponseError as e:
+        except (ClientResponseError, ClientConnectorCertificateError) as e:
             log.info(f"We were not able to download {mod_downloadurl} due to the ClientResponseError: {e}. We will retry the download using urllib3 (no guarantees)")
             await asyncio.sleep(3)
             save_mod_sync(mod_filename, mod_downloadurl)
