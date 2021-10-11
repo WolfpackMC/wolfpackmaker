@@ -116,7 +116,7 @@ async def get_raw_data(session, url, to_json=False):
         if to_json:
             return r.json()
         else:
-            return r.read()
+            return r.content
 
 to_process = []  # mods to process
 to_copy_process = [] # mods to copy
