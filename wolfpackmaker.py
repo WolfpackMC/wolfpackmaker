@@ -258,6 +258,7 @@ async def get_mods(clientonly=False, serveronly=False):
             log.critical(f" Detected version {platform.version().lower()}! It's probably Cee...")
     with Progress() as progress:
         verified_task = progress.add_task(description=f"Preparing to verify cached mods...", total=len(to_copy_process))
+        #?
         for m in mods:
             filename = m.get("filename")
             if filename is None:
