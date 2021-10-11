@@ -103,10 +103,12 @@ mods_cached = join(cached_dir, '.cached_mods.json')
 modpack_version_cached = join(cached_dir, '.modpack_version.txt')
 
 
-async def save_mod(mod_filename, mod_downloadurl, session):
+async def save_mod(mod_filename, mod_downloadurl, session, progress=None, progress_task=None):
     with session.get(mod_downloadurl, stream=True) as r:
         file = io.BytesIO()
         for chunk in r.iter_content(65535):
+            if progress is not None and progress_task is not None:
+                progress.update(progress_task, advance=len(chunk))
             file.write(chunk)
         file.seek(0)
         with open(join(mods_cache_dir, mod_filename), 'wb') as f:
@@ -264,6 +266,7 @@ async def get_mods(clientonly=False, serveronly=False):
     if 'darwin' in platform.version().lower():
         if meme_activated:
             log.critical(f" Detected version {platform.version().lower()}! It's probably Cee...")
+    log.info("Verifying cached mods...")
     for m in mods:
         filename = m.get("filename")
         if filename is None:
@@ -285,34 +288,30 @@ async def get_mods(clientonly=False, serveronly=False):
                 continue
         to_copy_process.append(filename)
         download_url = m.get("downloadUrl")
+        remote_size = await verify_mod(download_url, session)
         if not exists(join(mods_dir, filename)) or not exists(
                 join(mods_cache_dir, filename)):  # if it does not exist in the folder
             if exists(join(mods_cache_dir, filename)):
                 # verify mods
                 processed = 0
                 local_size = getsize(join(mods_cache_dir, filename))
-                remote_size = await verify_mod(download_url, session)
                 verified = local_size == remote_size
                 if not verified:
                     log.info(f"Failed to verify cached mod {filename}. Retrying...")
                     to_process.append(filename)
-                    tasks.append([filename, download_url])
+                    tasks.append([filename, download_url, remote_size])
                     continue
                 log.debug("Using cached {} from {}".format(filename, mods_cache_dir))
             else:
                 to_process.append(filename)
-                tasks.append([filename, download_url])
+                tasks.append([filename, download_url, remote_size])
     if tasks:
-        with Progress() as progress:
-            total = len(to_process)
-            download_task = progress.add_task(description=f"Preparing to download...", total=total)
-            processed = 0
-            for file in tasks:
+        for file in tasks:
+            with Progress() as progress:
                 filename = file[0]
                 download_url = file[1]
-                await save_mod(filename, download_url, session)
-                processed += 1
-                progress.update(download_task, description=f"Downloaded {filename}. ({processed}/{total})", advance=1)
+                download_task = progress.add_task(description=f"Downloading {filename}...", total=file[2])
+                await save_mod(filename, download_url, session, progress, download_task)
         with Progress() as progress:
             verified_task = progress.add_task(description=f"Preparing to verify...", total=total)
             total = len(to_process)
@@ -328,7 +327,8 @@ async def get_mods(clientonly=False, serveronly=False):
                     await save_mod(filename, download_url, session)
                     local_size = getsize(join(mods_cache_dir, filename))
                     verified = local_size == remote_size
-                progress.update(verified_task, description=f"Verified {filename}.", advance=1)
+                processed += 1
+                progress.update(verified_task, description=f"Verified {filename}. ({processed}/{total})", advance=1)
             to_process.remove(file[0])
     else:
         log.debug("We do not have any mods to process.")
