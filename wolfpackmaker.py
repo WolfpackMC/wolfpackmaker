@@ -268,49 +268,44 @@ async def get_mods(clientonly=False, serveronly=False):
     if 'darwin' in platform.version().lower():
         if meme_activated:
             log.critical(f" Detected version {platform.version().lower()}! It's probably Cee...")
-    with Progress() as progress:
-        verified_task = progress.add_task(description=f"Preparing to verify cached mods...", total=len(to_copy_process))
-        #?
-        for m in mods:
-            filename = m.get("filename")
-            if filename is None:
-                log.warning(f"Couldn't find a download file for {m.get('slug')}... this is usually Kalka's fault")
+    for m in mods:
+        filename = m.get("filename")
+        if filename is None:
+            log.warning(f"Couldn't find a download file for {m.get('slug')}... this is usually Kalka's fault")
+            continue
+        if clientonly and m.get("serveronly"):
+            log.info("Skipping servermod {}".format(m.get("name")))
+            continue
+        if serveronly and m.get("clientonly"):
+            log.info("Skipping clientside mod {}".format(m.get("name")))
+            continue
+        if 'darwin' in platform.version().lower():
+            found = False
+            for im in macos_incompatible_mods:
+                if im in filename:
+                    log.info(f"Skipping {im}")
+                    found = True
+            if found:
                 continue
-            if clientonly and m.get("serveronly"):
-                log.info("Skipping servermod {}".format(m.get("name")))
-                continue
-            if serveronly and m.get("clientonly"):
-                log.info("Skipping clientside mod {}".format(m.get("name")))
-                continue
-            if 'darwin' in platform.version().lower():
-                found = False
-                for im in macos_incompatible_mods:
-                    if im in filename:
-                        log.info(f"Skipping {im}")
-                        found = True
-                if found:
-                    continue
-            to_copy_process.append(filename)
-            download_url = m.get("downloadUrl")
-            if not exists(join(mods_dir, filename)) or not exists(
-                    join(mods_cache_dir, filename)):  # if it does not exist in the folder
-                if exists(join(mods_cache_dir, filename)):
-                    # verify mods
-                    processed = 0
-                    local_size = getsize(join(mods_cache_dir, filename))
-                    remote_size = await verify_mod(download_url, session)
-                    verified = local_size == remote_size
-                    while not verified:
-                        log.info(f"Failed to verify cached mod {filename}. Retrying...")
-                        to_process.append(filename)
-                        tasks.append([filename, download_url])
-                        local_size = getsize(join(mods_cache_dir, filename))
-                        verified = local_size == remote_size
-                    progress.update(verified_task, description=f"Verified {filename}.", advance=1)
-                    log.debug("Using cached {} from {}".format(filename, mods_cache_dir))
-                else:
+        to_copy_process.append(filename)
+        download_url = m.get("downloadUrl")
+        if not exists(join(mods_dir, filename)) or not exists(
+                join(mods_cache_dir, filename)):  # if it does not exist in the folder
+            if exists(join(mods_cache_dir, filename)):
+                # verify mods
+                processed = 0
+                local_size = getsize(join(mods_cache_dir, filename))
+                remote_size = await verify_mod(download_url, session)
+                verified = local_size == remote_size
+                if not verified:
+                    log.info(f"Failed to verify cached mod {filename}. Retrying...")
                     to_process.append(filename)
                     tasks.append([filename, download_url])
+                    continue
+                log.debug("Using cached {} from {}".format(filename, mods_cache_dir))
+            else:
+                to_process.append(filename)
+                tasks.append([filename, download_url])
     if tasks:
         with Progress() as progress:
             total = len(to_process)
