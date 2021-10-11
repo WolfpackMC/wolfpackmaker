@@ -14,7 +14,7 @@ import requests
 import zipfile
 from distutils.dir_util import copy_tree
 from os import getcwd, listdir, remove
-from os.path import abspath, dirname, exists, join
+from os.path import abspath, dirname, exists, join, getsize
 from pathlib import Path
 from pyfiglet import Figlet
 from rich.logging import RichHandler
@@ -110,6 +110,7 @@ async def save_mod(mod_filename, mod_downloadurl, session):
         file.seek(0)
         with open(join(mods_cache_dir, mod_filename), 'wb') as f:
             f.write(file.getbuffer())
+        return r.headers['Content-Length']
 
 async def get_raw_data(session, url, to_json=False):
     with session.get(url) as r:
@@ -281,18 +282,34 @@ async def get_mods(clientonly=False, serveronly=False):
                 download_url = m.get("downloadUrl")
                 tasks.append([filename, download_url])
     if tasks:
+        mod_contents = dict()
         with Progress() as progress:
             total = len(to_process)
             download_task = progress.add_task(description=f"Preparing to download...", total=total)
             processed = 0
             for file in tasks:
-                await save_mod(file[0], file[1], session)
+                content_length = await save_mod(file[0], file[1], session)
+                mod_contents[file[0]] = content_length
                 processed += 1
-                to_process.remove(file[0])
                 progress.update(download_task, description=f"Downloaded {file[0]}. ({processed}/{total})", advance=1)
+        with Progress() as progress:
+            total = len(to_process)
+            verified_task = progress.add_task(description=f"Preparing to verify...", total=total)
+            processed = 0
+            for file in tasks:
+                if exists(join(mods_cache_dir, filename)):
+                    local_size = getsize(join(mods_cache_dir, filename))
+                    verified = local_size == mod_contents[file[0]]
+                    while not verified:
+                        log.info(f"Failed to verify {file[0]}. Retrying...")
+                        content_length = await save_mod(file[0], file[1], session)
+                        local_size = getsize(join(mods_cache_dir, filename))
+                        verified = local_size == mod_contents[file[0]]
+                    progress.update(verified_task, description=f"Verified {file[0]}.")
+                    to_process.remove(file[0])
     else:
         log.debug("We do not have any mods to process.")
-    session.clear()
+    session.close()
     processed = 0
     with Progress() as progress:
         total = len(to_copy_process)
