@@ -103,14 +103,14 @@ modpack_version_cached = join(cached_dir, '.modpack_version.txt')
 
 
 async def save_mod(mod_filename, mod_downloadurl, session):
-    with session.get(mod_downloadurl) as r:
+    with session.get(mod_downloadurl, stream=True) as r:
         file = io.BytesIO()
         for chunk in r.iter_content(65535):
             file.write(chunk)
         file.seek(0)
         with open(join(mods_cache_dir, mod_filename), 'wb') as f:
             f.write(file.getbuffer())
-        return r.headers['Content-Length']
+        return r.headers['content-length']
 
 async def get_raw_data(session, url, to_json=False):
     with session.get(url) as r:
