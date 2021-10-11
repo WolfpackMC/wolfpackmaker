@@ -10,7 +10,7 @@ import platform
 import shutil
 import sys
 import time
-import urllib3
+import requests
 import zipfile
 from distutils.dir_util import copy_tree
 from os import getcwd, listdir, remove
@@ -103,14 +103,16 @@ modpack_version_cached = join(cached_dir, '.modpack_version.txt')
 
 
 async def save_mod(mod_filename, mod_downloadurl, session):
-    with session.request("GET", mod_downloadurl) as r:
-        file = io.BytesIO(r.read())
+    with session.get(mod_downloadurl) as r:
+        file = io.BytesIO()
+        for chunk in r.iter_content(65535):
+            file.write(chunk)
         file.seek(0)
         with open(join(mods_cache_dir, mod_filename), 'wb') as f:
-            f.write(file.read())
+            f.write(file.getbuffer())
 
 async def get_raw_data(session, url, to_json=False):
-    with session.request("GET", url) as r:
+    with session.get(url) as r:
         if to_json:
             return r.json()
         else:
@@ -177,7 +179,7 @@ def create_folders():
 
 
 async def get_mods(clientonly=False, serveronly=False):
-    session = urllib3.PoolManager(headers=headers)
+    session = requests.Session(headers=headers)
     modpack_version = ''
     if args.repo is not None and not '.lock' in args.repo:
         assets_list, modpack_version = await get_github_data(session)
