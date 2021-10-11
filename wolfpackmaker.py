@@ -122,9 +122,8 @@ async def verify_mod(mod_downloadurl, session):
             content_length = int(r.headers['Content-length'])
         except KeyError:
             #no other choice at this point...
-            t = requests.get("lel")
             content_length = int()
-            for chunk in t.iter_content(65535):
+            for chunk in r.iter_content(65535):
                 content_length += len(chunk)
             return content_length
 
