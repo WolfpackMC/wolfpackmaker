@@ -32,7 +32,8 @@ class Wolfpackmaker:
         return self.VERSION
 
 headers = {
-    'User-Agent': 'Wolfpackmaker (https://woofmc.xyz)'
+    'User-Agent': 'Wolfpackmaker (https://woofmc.xyz)',
+    'Accept-Encoding': None
 }
 
 macos_incompatible_mods = [
