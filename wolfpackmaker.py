@@ -103,14 +103,14 @@ modpack_version_cached = join(cached_dir, '.modpack_version.txt')
 
 
 async def save_mod(mod_filename, mod_downloadurl, session):
-    with session.get(mod_downloadurl) as r:
+    with session.request("GET", mod_downloadurl) as r:
         file = io.BytesIO(r.read())
         file.seek(0)
         with open(join(mods_cache_dir, mod_filename), 'wb') as f:
             f.write(file.read())
 
 async def get_raw_data(session, url, to_json=False):
-    with session.get(url) as r:
+    with session.request("GET", url) as r:
         if to_json:
             return r.json()
         else:
@@ -200,7 +200,7 @@ async def get_mods(clientonly=False, serveronly=False):
             config_zip.extractall(cached_config_dir)
             if exists(join(cached_config_dir, '.configignore')):
                 with open(join(cached_config_dir, '.configignore'), 'r') as f:
-                    for l in f.readlines():
+                    for l in f.read().splitlines():
                         ignored_cache += [l]
             log.info("Checking for ignored configs...")
             for c in ignored_cache:
