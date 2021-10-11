@@ -179,7 +179,8 @@ def create_folders():
 
 
 async def get_mods(clientonly=False, serveronly=False):
-    session = requests.Session(headers=headers)
+    session = requests.Session()
+    session.headers.update(headers)
     modpack_version = ''
     if args.repo is not None and not '.lock' in args.repo:
         assets_list, modpack_version = await get_github_data(session)
