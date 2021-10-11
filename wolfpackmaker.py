@@ -114,7 +114,19 @@ async def save_mod(mod_filename, mod_downloadurl, session):
 
 async def verify_mod(mod_downloadurl, session):
     with session.get(mod_downloadurl, stream=True) as r:
-        return int(r.headers['content-length'])
+        try:
+            content_length = int(r.headers['content-length'])
+        except KeyError:
+            content_length = int(r.headers['Content-Length'])
+        except KeyError:
+            content_length = int(r.headers['Content-length'])
+        except KeyError:
+            #no other choice at this point...
+            t = requests.get("lel")
+            content_length = int()
+            for chunk in t.iter_content(65535):
+                content_length += len(chunk)
+            return content_length
 
 async def get_raw_data(session, url, to_json=False):
     with session.get(url) as r:
