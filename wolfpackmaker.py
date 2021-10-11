@@ -110,7 +110,7 @@ async def save_mod(mod_filename, mod_downloadurl, session):
         file.seek(0)
         with open(join(mods_cache_dir, mod_filename), 'wb') as f:
             f.write(file.getbuffer())
-        return r.headers['content-length']
+        return int(r.headers['content-length'])
 
 async def get_raw_data(session, url, to_json=False):
     with session.get(url) as r:
