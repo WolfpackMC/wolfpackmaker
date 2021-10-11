@@ -110,6 +110,9 @@ async def save_mod(mod_filename, mod_downloadurl, session):
         file.seek(0)
         with open(join(mods_cache_dir, mod_filename), 'wb') as f:
             f.write(file.getbuffer())
+
+async def verify_mod(mod_downloadurl, session):
+    with session.get(mod_downloadurl, stream=True) as r:
         return int(r.headers['content-length'])
 
 async def get_raw_data(session, url, to_json=False):
@@ -253,60 +256,77 @@ async def get_mods(clientonly=False, serveronly=False):
     if 'darwin' in platform.version().lower():
         if meme_activated:
             log.critical(f" Detected version {platform.version().lower()}! It's probably Cee...")
-    for m in mods:
-        filename = m.get("filename")
-        if filename is None:
-            log.warning(f"Couldn't find a download file for {m.get('slug')}... this is usually Kalka's fault")
-            continue
-        if clientonly and m.get("serveronly"):
-            log.info("Skipping servermod {}".format(m.get("name")))
-            continue
-        if serveronly and m.get("clientonly"):
-            log.info("Skipping clientside mod {}".format(m.get("name")))
-            continue
-        if 'darwin' in platform.version().lower():
-            found = False
-            for im in macos_incompatible_mods:
-                if im in filename:
-                    log.info(f"Skipping {im}")
-                    found = True
-            if found:
+    with Progress() as progress:
+        for m in mods:
+            filename = m.get("filename")
+            if filename is None:
+                log.warning(f"Couldn't find a download file for {m.get('slug')}... this is usually Kalka's fault")
                 continue
-        to_copy_process.append(filename)
-        if not exists(join(mods_dir, filename)) or not exists(
-                join(mods_cache_dir, filename)):  # if it does not exist in the folder
-            if exists(join(mods_cache_dir, filename)):
-                log.debug("Using cached {} from {}".format(filename, mods_cache_dir))
-            else:
-                to_process.append(filename)
-                download_url = m.get("downloadUrl")
-                tasks.append([filename, download_url])
+            if clientonly and m.get("serveronly"):
+                log.info("Skipping servermod {}".format(m.get("name")))
+                continue
+            if serveronly and m.get("clientonly"):
+                log.info("Skipping clientside mod {}".format(m.get("name")))
+                continue
+            if 'darwin' in platform.version().lower():
+                found = False
+                for im in macos_incompatible_mods:
+                    if im in filename:
+                        log.info(f"Skipping {im}")
+                        found = True
+                if found:
+                    continue
+            to_copy_process.append(filename)
+            verified_task = progress.add_task(description=f"Preparing to verify cached mods...", total=total)
+            download_url = m.get("downloadUrl")
+            if not exists(join(mods_dir, filename)) or not exists(
+                    join(mods_cache_dir, filename)):  # if it does not exist in the folder
+                if exists(join(mods_cache_dir, filename)):
+                    # verify mods
+                    total = len(to_copy_process)
+                    processed = 0
+                    local_size = getsize(join(mods_cache_dir, filename))
+                    remote_size = await verify_mod(download_url, session)
+                    verified = local_size == remote_size
+                    while not verified:
+                        log.info(f"Failed to verify cached mod {filename}. Retrying...")
+                        to_process.append(filename)
+                        tasks.append([filename, download_url])
+                        local_size = getsize(join(mods_cache_dir, filename))
+                        verified = local_size == remote_size
+                    progress.update(verified_task, description=f"Verified {filename}.", advance=1)
+                    log.debug("Using cached {} from {}".format(filename, mods_cache_dir))
+                else:
+                    to_process.append(filename)
+                    tasks.append([filename, download_url])
     if tasks:
-        mod_contents = dict()
         with Progress() as progress:
             total = len(to_process)
             download_task = progress.add_task(description=f"Preparing to download...", total=total)
             processed = 0
             for file in tasks:
-                content_length = await save_mod(file[0], file[1], session)
-                mod_contents[file[0]] = content_length
+                filename = file[0]
+                download_url = file[1]
+                await save_mod(filename, download_url, session)
                 processed += 1
-                progress.update(download_task, description=f"Downloaded {file[0]}. ({processed}/{total})", advance=1)
+                progress.update(download_task, description=f"Downloaded {filename}. ({processed}/{total})", advance=1)
         with Progress() as progress:
-            total = len(to_process)
             verified_task = progress.add_task(description=f"Preparing to verify...", total=total)
+            total = len(to_process)
             processed = 0
             for file in tasks:
-                if exists(join(mods_cache_dir, filename)):
+                filename = file[0]
+                download_url = file[1]
+                local_size = getsize(join(mods_cache_dir, filename))
+                remote_size = await verify_mod(download_url, session)
+                verified = local_size == remote_size
+                while not verified:
+                    log.info(f"Failed to verify cached mod {filename}. Retrying...")
+                    await save_mod(filename, download_url, session)
                     local_size = getsize(join(mods_cache_dir, filename))
-                    verified = local_size == mod_contents[file[0]]
-                    while not verified:
-                        log.info(f"Failed to verify {file[0]}. Retrying...")
-                        content_length = await save_mod(file[0], file[1], session)
-                        local_size = getsize(join(mods_cache_dir, filename))
-                        verified = local_size == mod_contents[file[0]]
-                    progress.update(verified_task, description=f"Verified {file[0]}.")
-                    to_process.remove(file[0])
+                    verified = local_size == remote_size
+                progress.update(verified_task, description=f"Verified {filename}.", advance=1)
+            to_process.remove(file[0])
     else:
         log.debug("We do not have any mods to process.")
     session.close()
