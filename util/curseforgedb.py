@@ -1,4 +1,5 @@
 import aiohttp
+import argparse
 import asyncio
 import json
 import logging
@@ -12,7 +13,23 @@ logging.basicConfig(
     level=logging.DEBUG, format="%(message)s", datefmt="[%X]", handlers=[RichHandler(rich_tracebacks=True)]
 )
 
-headers = {'User-Agent':'wolfpackmaker/0.3.0 (made by Kalka) business inquiries: b@kalka.io'}
+def parse_args(parser):
+    args = parser.parse_args()
+    return args
+
+
+def init_args():
+    parser = argparse.ArgumentParser(
+        description='Wolfpackmaker (curseforgedb.py) (https://woofmc.xyz)'
+    )
+    parser.add_argument('--with-figlet', help='Defaults to True. Use Figlet when printing the wolfpackmaker intro')
+    return parser
+
+
+parser = init_args()
+args = parse_args(parser)
+
+headers = {'User-Agent':'wolfpackmaker (made by Kalka) business inquiries: b@kalka.io'}
 
 
 async def get_curseforge_api(session, index, page_size, log, version=None):
@@ -72,7 +89,7 @@ async def process_curseforge_db(log):
 def main():
     init_traceback()
     log = logging.getLogger("rich")
-    fancy_intro(log)
+    fancy_intro(log, args.with_figlet, args.with_figlet and parser.description)
     loop = asyncio.get_event_loop()
     loop.run_until_complete(process_curseforge_db(log))
 

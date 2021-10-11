@@ -24,7 +24,7 @@ from rich.traceback import install as init_traceback
 log = logging.getLogger("rich")
 
 class Wolfpackmaker:
-    VERSION = f'0.3.0'
+    VERSION = f'0.4.1'
     DATE = 1633053812
 
     @staticmethod
@@ -75,7 +75,6 @@ def init_args():
     parser.add_argument('-c', '--clientonly', help='Enable clientonly.', action='store_true', default=False)
     parser.add_argument('-s', '--serveronly', help='Enable serveronly.', action='store_true', default=False)
     parser.add_argument('-rs', '--release', help='Get release name.', default='latest')
-    parser.add_argument('--singlethread', help='Run on one thread only.', action='store_true')
     return parser
 
 

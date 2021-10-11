@@ -43,9 +43,7 @@ def init_args():
     parser.add_argument('-v', '--verbose', help='Increase output verbosity.', action='store_true')
     parser.add_argument('-m', '--manifest', help='Optional location for the manifest e.g /opt/manifests/manifest.yml.'
                                                  '\nDefaults to workdir (manifest.yml)')
-    parser.add_argument('-nomod', '--nomodleftbehind', help='Enacts the No Mod Left Behind Act. Finds all missing mods'
-                                                            '\nusing CurseForge API if said mod is not found in the CurseForge DB.'
-                                                            '\nDefaults to true', default=True)
+    parser.add_argument('--with-figlet', help='Defaults to True. Use Figlet when printing the wolfpackmaker intro')
     return parser
 
 
@@ -295,7 +293,7 @@ def save_lockfile():
 
 def main():
     init_traceback()
-    fancy_intro(log)
+    fancy_intro(log, args.with_figlet, args.with_figlet and parser.description)
     loop = asyncio.get_event_loop()
     task = loop.create_task(process_modpack_config())
     loop.run_until_complete(task)
