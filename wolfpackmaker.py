@@ -125,7 +125,7 @@ async def verify_mod(mod_downloadurl, session):
             content_length = int()
             for chunk in r.iter_content(65535):
                 content_length += len(chunk)
-            return content_length
+        return content_length
 
 async def get_raw_data(session, url, to_json=False):
     with session.get(url) as r:
