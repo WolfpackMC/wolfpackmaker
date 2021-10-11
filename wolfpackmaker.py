@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 
-import aiohttp
 import argparse
 import asyncio
 import io
 import json
 import logging
-from aiohttp.client_exceptions import ClientConnectorCertificateError, ClientResponseError
 import owoify
 import platform
 import shutil
 import sys
 import time
+import urllib3
 import zipfile
 from distutils.dir_util import copy_tree
 from os import getcwd, listdir, remove
@@ -53,7 +52,7 @@ def fancy_intro(log):
          'Hehe. UwU, It\'s all we have, I know. I\'m sorry!',
          'I should probably get a better idea for this list...',
          'Not sponsored by Awoos!'
-         ]
+        ]
     )
     log.info(owoify.owoify(keywords))
     log.info(str('').join(['####' for _ in range(16)]))
@@ -105,31 +104,18 @@ modpack_version_cached = join(cached_dir, '.modpack_version.txt')
 
 
 async def save_mod(mod_filename, mod_downloadurl, session):
-    try:
-        async with session.get(mod_downloadurl) as r:
-            file = io.BytesIO(await r.read())
-            file.seek(0)
-            with open(join(mods_cache_dir, mod_filename), 'wb') as f:
-                f.write(file.read())
-    except (ClientResponseError, ClientConnectorCertificateError) as e:
-        log.info(f"We were not able to download {mod_downloadurl} due to: {e}. \nWe will retry the download using urllib3 (no guarantees)")
-        await asyncio.sleep(3)
-        save_mod_sync(mod_filename, mod_downloadurl)
-
-def save_mod_sync(mod_filename, mod_downloadurl):
-    import urllib3
-    session = urllib3.PoolManager(headers=headers)
-    r = session.request("GET", mod_downloadurl, preload_content=False)
-    with open(join(mods_cache_dir, mod_filename), 'wb') as f:
-        for data in r.stream(65535):
-            f.write(data)
+    with session.get(mod_downloadurl) as r:
+        file = io.BytesIO(r.read())
+        file.seek(0)
+        with open(join(mods_cache_dir, mod_filename), 'wb') as f:
+            f.write(file.read())
 
 async def get_raw_data(session, url, to_json=False):
-    async with session.get(url) as r:
+    with session.get(url) as r:
         if to_json:
-            return await r.json()
+            return r.json()
         else:
-            return await r.read()
+            return r.read()
 
 to_process = []  # mods to process
 to_copy_process = [] # mods to copy
@@ -192,7 +178,7 @@ def create_folders():
 
 
 async def get_mods(clientonly=False, serveronly=False):
-    session = aiohttp.ClientSession(headers=headers, connector=aiohttp.TCPConnector(verify_ssl=False))
+    session = urllib3.PoolManager(headers=headers)
     modpack_version = ''
     if args.repo is not None and not '.lock' in args.repo:
         assets_list, modpack_version = await get_github_data(session)
@@ -291,26 +277,20 @@ async def get_mods(clientonly=False, serveronly=False):
             else:
                 to_process.append(filename)
                 download_url = m.get("downloadUrl")
-                if not args.singlethread:
-                    tasks.append([filename, download_url])
-                else:
-                    save_mod_sync(filename, download_url)
-                    log.info(f"Downloaded {download_url}.")
-                    to_process.remove(filename)
+                tasks.append([filename, download_url])
     if tasks:
         with Progress() as progress:
             total = len(to_process)
             download_task = progress.add_task(description=f"Preparing to download...", total=total)
             processed = 0
             for file in tasks:
-                progress.update(download_task, description=f"Preparing to download {file[0]}... ({processed}/{total})", advance=0)
                 await save_mod(file[0], file[1], session)
                 processed += 1
                 to_process.remove(file[0])
                 progress.update(download_task, description=f"Downloaded {file[0]}. ({processed}/{total})", advance=1)
     else:
         log.debug("We do not have any mods to process.")
-    await session.close()
+    session.clear()
     processed = 0
     with Progress() as progress:
         total = len(to_copy_process)
