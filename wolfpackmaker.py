@@ -257,6 +257,7 @@ async def get_mods(clientonly=False, serveronly=False):
         if meme_activated:
             log.critical(f" Detected version {platform.version().lower()}! It's probably Cee...")
     with Progress() as progress:
+        verified_task = progress.add_task(description=f"Preparing to verify cached mods...", total=len(to_copy_process))
         for m in mods:
             filename = m.get("filename")
             if filename is None:
@@ -277,13 +278,11 @@ async def get_mods(clientonly=False, serveronly=False):
                 if found:
                     continue
             to_copy_process.append(filename)
-            verified_task = progress.add_task(description=f"Preparing to verify cached mods...", total=total)
             download_url = m.get("downloadUrl")
             if not exists(join(mods_dir, filename)) or not exists(
                     join(mods_cache_dir, filename)):  # if it does not exist in the folder
                 if exists(join(mods_cache_dir, filename)):
                     # verify mods
-                    total = len(to_copy_process)
                     processed = 0
                     local_size = getsize(join(mods_cache_dir, filename))
                     remote_size = await verify_mod(download_url, session)
