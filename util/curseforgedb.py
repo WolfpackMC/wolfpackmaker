@@ -71,7 +71,7 @@ async def process_curseforge_db(log):
     for d in await future:
         for m in d:
             if m['id'] in [v['id'] for v in mods]:
-                break
+                continue
             mods.append({
                 "id": m.get("id"),
                 "name": m.get("name"),
