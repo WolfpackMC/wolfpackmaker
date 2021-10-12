@@ -24,7 +24,7 @@ from rich.traceback import install as init_traceback
 log = logging.getLogger("rich")
 
 class Wolfpackmaker:
-    VERSION = f'0.4.1'
+    VERSION = f'0.4.2'
     DATE = 1633053812
 
     @staticmethod
@@ -103,27 +103,25 @@ mods_cached = join(cached_dir, '.cached_mods.json')
 modpack_version_cached = join(cached_dir, '.modpack_version.txt')
 
 
-async def save_mod(mod_filename, mod_downloadurl, session, progress=None, progress_task=None):
-    with session.get(mod_downloadurl, stream=True) as r:
-        file = io.BytesIO()
-        for chunk in r.iter_content(65535):
-            if progress is not None and progress_task is not None:
-                progress.update(progress_task, advance=len(chunk))
-            file.write(chunk)
-        file.seek(0)
-        with open(join(mods_cache_dir, mod_filename), 'wb') as f:
-            f.write(file.getbuffer())
-
-async def verify_mod(mod_downloadurl, session):
-    with session.get(mod_downloadurl, stream=True) as r:
-        try:
-            content_length = int(r.headers['content-length'])
-        except KeyError:
-            #no other choice at this point...
-            content_length = int()
+async def save_mod(mod_filename, mod_downloadurl, session):
+    start = time.time()
+    with Progress() as progress:
+        progress_task = progress.add_task(description=f"Downloading {mod_filename}...")
+        with session.get(mod_downloadurl, stream=True) as r:
+            stream_length = int(r.headers['content-length'])
+            progress.update(progress_task, total=stream_length)
+            file = io.BytesIO()
             for chunk in r.iter_content(65535):
-                content_length += len(chunk)
-        return content_length
+                chunk_size = len(chunk)
+                speed = (chunk_size // (time.time() - start) /
+                        1000000) > 1 and f'{chunk_size // (time.time() - start) / 1000000} MB/s' or f'{chunk_size // (time.time() - start) / 1000} KB/s'
+                progress.update(progress_task,
+                description=f"> Downloading {mod_filename}... {chunk_size > 1000000 and chunk_size / 1000000 or chunk_size / 1000} {chunk_size > 1000000 and 'MB' or 'KB'}/{int(stream_length) > 1000000 and int(stream_length) / 1000000 or int(stream_length) / 1000} {int(stream_length) > 1000000 and 'MB' or 'KB'} {speed} ({(time.time() - start):.2f} elapsed)",
+                advance=len(chunk))
+                file.write(chunk)
+            file.seek(0)
+            with open(join(mods_cache_dir, mod_filename), 'wb') as f:
+                f.write(file.getbuffer())
 
 async def get_raw_data(session, url, to_json=False):
     with session.get(url) as r:
@@ -287,8 +285,8 @@ async def get_mods(clientonly=False, serveronly=False):
             if found:
                 continue
         to_copy_process.append(filename)
-        download_url = m.get("downloadUrl")
-        remote_size = await verify_mod(download_url, session)
+        download_url = m['downloadUrl']
+        remote_size = m['fileLength']
         if not exists(join(mods_dir, filename)) or not exists(
                 join(mods_cache_dir, filename)):  # if it does not exist in the folder
             if exists(join(mods_cache_dir, filename)):
@@ -306,21 +304,23 @@ async def get_mods(clientonly=False, serveronly=False):
                 to_process.append(filename)
                 tasks.append([filename, download_url, remote_size])
     if tasks:
-        for file in tasks:
-            with Progress() as progress:
-                filename = file[0]
-                download_url = file[1]
-                download_task = progress.add_task(description=f"Downloading {filename}...", total=file[2])
-                await save_mod(filename, download_url, session, progress, download_task)
+        from operator import itemgetter
+        # Sort mods to download by filesize
+
+        tasks = sorted(tasks, key=itemgetter(2))
+        for file in reversed(tasks):
+            filename = file[0]
+            download_url = file[1]
+            await save_mod(filename, download_url, session)
         with Progress() as progress:
-            verified_task = progress.add_task(description=f"Preparing to verify...", total=total)
             total = len(to_process)
+            verified_task = progress.add_task(description=f"Preparing to verify...", total=total)
             processed = 0
-            for file in tasks:
+            for file in reversed(tasks):
                 filename = file[0]
                 download_url = file[1]
                 local_size = getsize(join(mods_cache_dir, filename))
-                remote_size = await verify_mod(download_url, session)
+                remote_size = file[2]
                 verified = local_size == remote_size
                 while not verified:
                     log.info(f"Failed to verify cached mod {filename}. Retrying...")
@@ -328,7 +328,7 @@ async def get_mods(clientonly=False, serveronly=False):
                     local_size = getsize(join(mods_cache_dir, filename))
                     verified = local_size == remote_size
                 processed += 1
-                progress.update(verified_task, description=f"Verified {filename}. ({processed}/{total})", advance=1)
+                progress.update(verified_task, description=f"> Verified {filename}. ({processed}/{total})", advance=1)
             to_process.remove(file[0])
     else:
         log.debug("We do not have any mods to process.")
@@ -341,7 +341,7 @@ async def get_mods(clientonly=False, serveronly=False):
             if exists(join(mods_cache_dir, m)):
                 shutil.copy(join(mods_cache_dir, m), join(mods_dir, m))
                 processed += 1
-                progress.update(copy_task, description=f"Copied {m}. ({processed}/{total})", advance=1)
+                progress.update(copy_task, description=f"> Copied {m}. ({processed}/{total})", advance=1)
     log.info("Writing cached mod list to {}...".format(mods_cached))
     with open(mods_cached, 'w') as f:
         f.write(json.dumps(cached_mods))

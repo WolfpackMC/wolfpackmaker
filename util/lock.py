@@ -50,38 +50,41 @@ def init_args():
 parser = init_args()
 args = parse_args(parser)
 
+timeout = aiohttp.ClientTimeout(total=0.5)
+retries = 5
+
 async def fetch_file(curseforge_url, mod, session, fileId):
-    files_url = curseforge_url + '{}/file/{}'.format(mod.get("id"), fileId)
-    async with session.get(files_url) as r:
+    files_url = f"{curseforge_url}{mod['id']}/file/{fileId}"
+    for i in range(retries):
         try:
-            file = await r.json()
-        except ContentTypeError:
-            log.error(mod)
-            sys.exit(log.error("ContentType error."))
+            async with session.get(files_url, timeout=timeout) as r:
+                try:
+                    file = await r.json()
+                except ContentTypeError:
+                    log.error(mod)
+                    sys.exit(log.error("ContentType error."))
+            break
+        except asyncio.TimeoutError:
+            log.info(f"Retrying {mod['name']} ({i+1} of {retries})...")
+            continue
     return file
 
 
 async def fetch_mod(curseforge_url, mod_id, session):
     mod_url = curseforge_url + str(mod_id)
-    async with session.get(mod_url) as r:
-        # log.debug("Responding to request {}...".format(mod_url))
+    for i in range(retries):
         try:
-            mod = await r.json()
-        except ContentTypeError:
-            sys.exit(log.error("ContentType error."))
+            async with session.get(mod_url, timeout=timeout) as r:
+                # log.debug("Responding to request {}...".format(mod_url))
+                try:
+                    mod = await r.json()
+                except ContentTypeError:
+                    sys.exit(log.error("ContentType error."))
+            break
+        except asyncio.TimeoutError:
+            log.info(f"Retrying {mod_id['name']}...")
+            continue
     return mod
-
-
-async def search_mod(curseforge_url, mod_slug, session):
-    search_url = curseforge_url + 'search?gameId=432&sectionId=6&searchfilter={}'.format(mod_slug)
-    async with session.get(search_url) as r:
-        mods = await r.json()
-    for m in mods:
-        if m.get("slug") == mod_slug:
-            log.info("Found {} as {} via CurseForge API! [{}] [{}]".format(mod_slug, m.get("slug"), m.get("name"),
-                                                                           m.get("id")))
-            return m
-    log.warning(f"We still cannot find {mod_slug} in the API... wtf?")
 
 
 modloader = ''
@@ -92,20 +95,24 @@ import datetime
 async def get_mod_file(curseforge_url, modpack_manifest, version, mc_version, mod, session, is_file_found):
     if is_file_found:
         return
-    mod_compat = version.get("modLoader")
-    if modpack_manifest.get("modloader").lower() == 'forge' and mod_compat == TYPE_FABRIC:
+    try:
+        mod_compat = version["modLoader"]
+    except KeyError:
+        mod_compat = None
+    
+    if modpack_manifest["modloader"].lower() == 'forge' and mod_compat == TYPE_FABRIC:
         return
-    if modpack_manifest.get("modloader").lower() == 'fabric' and mod_compat == TYPE_FORGE:
+    if modpack_manifest["modloader"].lower() == 'fabric' and mod_compat == TYPE_FORGE:
         return
-    if version.get("gameVersion") in mc_version:
-        file_id = version.get("projectFileId")
+    if version["gameVersion"] in mc_version:
+        file_id = version["projectFileId"]
         file = await fetch_file(curseforge_url, mod, session, file_id)
         return file
 
 
 async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest, cf_data, completed, to_complete):
     start_time = time.time()
-    mc_version = [modpack_manifest.get("version")]
+    mc_version = [modpack_manifest["version"]]
     if "1.16.5" in mc_version:
         for i in range(1, 5):
             mc_version.append(f"1.16.{i}")
@@ -114,45 +121,47 @@ async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest, cf_data
     try:
         latest_files = mod['latest_files']
     except KeyError:
-        latest_files = mod['gameVersionLatestFiles']
+        try:
+            latest_files = mod['gameVersionLatestFiles']
+        except KeyError:
+            latest_files = mod['latestFiles']
     
     for version in latest_files:
-            file = asyncio.create_task(get_mod_file(curseforge_url, modpack_manifest, version, mc_version, mod, session, file_found))
-            await file
-            file = file.result()
+            file = await get_mod_file(curseforge_url, modpack_manifest, version, mc_version, mod, session, file_found)
             if not file: continue
             file_found = True
             deps = []
-            for dep in file.get("dependencies"):
-                if dep.get("addonId") in [m.get("id") for m in found_mods]:
+            for dep in file["dependencies"]:
+                if dep["addonId"] in [m["id"] for m in found_mods]:
                     continue
-                deps += [d for d in cf_data if dep.get("addonId") == d.get("id") and dep.get("type") == 3]
+                deps += [d for d in cf_data if dep["addonId"] == d["id"] and dep["type"] == 3]
             dep_file_found = False
             for d in deps:
-                log.info(f"Resolving dependency {d.get('name')} for mod {mod.get('name')}...")
-                for df in d.get("latest_files"):
+                log.info(f"Resolving dependency {d['name']} for mod {mod['name']}...")
+                for df in d["latest_files"]:
                     dep_file = await get_mod_file(curseforge_url, modpack_manifest, df, mc_version, d, session, dep_file_found)
                     if not dep_file: continue
                     dep_file_found = True
-                    if d.get("id") in [m.get("id") for m in found_mods]:
+                    if d["id"] in [m["id"] for m in found_mods]:
                         continue
                     found_mods.append({
-                        "id": d.get("id"),
-                        "slug": d.get("slug"),
-                        "name": d.get("name"),
-                        "downloadUrl": dep_file.get("downloadUrl"),
-                        "filename": dep_file.get("fileName")
+                        "id": d["id"],
+                        "slug": d["slug"],
+                        "name": d["name"],
+                        "downloadUrl": dep_file["downloadUrl"],
+                        "filename": dep_file["fileName"],
+                        "fileLength": dep_file["fileLength"]
                     })
             for m in found_mods:
                 if m.get('downloadUrl') is not None:
                     continue
-                if m.get("id") == mod.get("id"):
-                    m.update({'downloadUrl': file.get('downloadUrl'), 'filename': file.get('fileName')})
+                if m["id"] == mod["id"]:
+                    m.update({'downloadUrl': file['downloadUrl'], 'filename': file['fileName'], 'fileLength': file['fileLength']})
     completed[0] += 1
-    log.info(f"[LOCK] [{completed[0]}/{to_complete[0]}] {mod.get('name')} took {time.time() - start_time:.3f} seconds.")
+    log.info(f"[LOCK] [{completed[0]}/{to_complete[0]}] {mod['name']} took {time.time() - start_time:.3f} seconds.")
     if not file_found:
         log.warning(
-            f"Mod {mod.get('slug')} [{mod.get('name')}] does not have an apparent version for {mc_version}, tread with caution")
+            f"Mod {mod['slug']} [{mod['name']}] does not have an apparent version for {mc_version}, tread with caution")
 
 
 async def process_modpack_config():
@@ -169,7 +178,7 @@ async def process_modpack_config():
         args.manifest = 'manifest.yml'
     with open(args.manifest or 'manifest.yml', 'r') as f:
         modpack_manifest = yaml.load(f.read(), Loader=yaml.SafeLoader)
-    mods = modpack_manifest.get("mods")
+    mods = modpack_manifest["mods"]
     # check for duplicates
     duplicate_mods = []
     for idx, mod in enumerate(mods):
@@ -183,7 +192,7 @@ async def process_modpack_config():
     log.info(f"Reading CurseForge data from {curseforge_download_url}")
     start_time = time.time()
     async with session.get(curseforge_download_url) as r:
-        date = datetime.datetime.strptime(r.headers.get("last-modified"), "%a, %d %b %Y %H:%M:%S %Z")
+        date = datetime.datetime.strptime(r.headers["last-modified"], "%a, %d %b %Y %H:%M:%S %Z")
         log.info(f"CurseForge DB date is {datetime.datetime.strftime(date, '%B %d, %Y at %H:%M:%Sz')}")
         if chunked:
             log.info("Reading chunked data... (it's probably big)")
@@ -219,9 +228,16 @@ async def process_modpack_config():
                     "id": None,
                     "name": k
                 }][0]
-            custom = []
+            custom = [False]
+            has_id = [False]
             match v:
                 case {'url': url}:
+                    try:
+                        async with session.get(url) as r:
+                            content_length = r.headers['content-length']
+                    except KeyError:
+                        sys.exit(log.critical(f"Couldn't find content length for {k}. Why...?"))
+                    content_length = int(content_length)
                     found_mods.append({
                         "id": mod_data['id'] or None,
                         "name": mod_data['name'] or k,
@@ -232,51 +248,46 @@ async def process_modpack_config():
                         "clientonly": client_only,
                         "serveronly": server_only,
                         "optional": optional,
-                        "custom": True
+                        "custom": True,
+                        "fileLength": content_length,
                     })
                     to_complete[0] += 1
                     completed[0] += 1
                     log.info(f"[LOCK] [{completed[0]}/{to_complete[0]}] Resolved {mod_data['name']}, using custom URL {url}")
-                    custom.append(True)
-            if custom: continue
-            if mod_data:
-                log.info(f"[MATCH] [{completed[0]}/{to_complete[0]}] Resolved {mod_data['name']} {finished_suffix.format(time.time() - start_time)}!")
-                found_mods.append({
-                    "id": mod_data['id'] or None,
-                    "name": mod_data['name'] or k,
-                    "slug": k,
-                    "clientonly": client_only,
-                    "serveronly": server_only,
-                    "optional": optional
-                })
-                task = asyncio.create_task(fetch_mod_data(curseforge_url, mod_data, session, modpack_manifest, curseforge_data, completed, to_complete))
-                tasks.append(task)
-                to_complete[0] += 1
-            else:
-                match v:
-                    case {'id': id}:
-                            log.info(f"Using {id} for {k}. This should guarantee a positive match.")
-                            cf_get = await session.get(curseforge_url + str(id))
-                            data = await cf_get.json()
-                            if k != data['slug']:
-                                sys.exit(log.critical(f"Mod mismatch! {k} =/= {data['slug']}. This is usually impossible unless you are using the wrong mod ID."))
-                            log.info(f"[MATCH] [{completed[0]}/{to_complete[0]}] Resolved {data['name']} through CurseForge!")
-                            found_mods.append({
-                                "id": data['id'],
-                                "slug": data['slug'],
-                                "name": data['name'],
-                                "clientonly": client_only,
-                                "serveronly": server_only,
-                                "optional": optional
-                            })
-                            task = asyncio.create_task(fetch_mod_data(curseforge_url, data, session, modpack_manifest, curseforge_data, completed, to_complete))
-                            tasks.append(task)
-                            to_complete[0] += 1
-                    case None:
-                        log.info(f"{k} was not found. {not_found_msg}")
-                        continue
-            if not mod_data:
-                continue
+                    custom[0] = True
+                case {'id': id}:
+                    to_complete[0] += 1
+                    log.info(f"Using {id} for {k}. This should guarantee a positive match.")
+                    cf_get = await session.get(curseforge_url + str(id))
+                    data = await cf_get.json()
+                    if k != data['slug']:
+                        sys.exit(log.critical(f"Mod mismatch! {k} =/= {data['slug']}. This is usually impossible unless you are using the wrong mod ID."))
+                    log.info(f"[MATCH] [{completed[0]}/{to_complete[0]}] Resolved {data['name']} through CurseForge!")
+                    found_mods.append({
+                        "id": data['id'],
+                        "slug": data['slug'],
+                        "name": data['name'],
+                        "clientonly": client_only,
+                        "serveronly": server_only,
+                        "optional": optional
+                    })
+                    task = asyncio.create_task(fetch_mod_data(curseforge_url, data, session, modpack_manifest, curseforge_data, completed, to_complete))
+                    tasks.append(task)
+                    has_id[0] = True
+            if has_id[0]: continue
+            if custom[0]: continue
+            to_complete[0] += 1
+            log.info(f"[MATCH] [{completed[0]}/{to_complete[0]}] Resolved {mod_data['name']} {finished_suffix.format(time.time() - start_time)}!")
+            found_mods.append({
+                "id": mod_data['id'] or None,
+                "name": mod_data['name'] or k,
+                "slug": k,
+                "clientonly": client_only,
+                "serveronly": server_only,
+                "optional": optional
+            })
+            task = asyncio.create_task(fetch_mod_data(curseforge_url, mod_data, session, modpack_manifest, curseforge_data, completed, to_complete))
+            tasks.append(task)
 
     await asyncio.gather(*tasks)
     await session.close()
