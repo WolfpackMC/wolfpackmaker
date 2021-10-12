@@ -70,14 +70,14 @@ async def process_curseforge_db(log):
     future = asyncio.gather(*workers)
     for d in await future:
         for m in d:
-            if m.get("id") in [v.get("id") for v in mods]:
-                continue
+            if m['id'] in [v['id'] for v in mods]:
+                break
             mods.append({
                 "id": m.get("id"),
                 "name": m.get("name"),
                 "summary": m.get("summary"),
                 "slug": m.get("slug"),
-                "latest_files": m.get("gameVersionLatestFiles")
+                "latest_files": m.get("gameVersionLatestFiles") or m.get("latest_files") or m.get("latestFiles")
             })
     log.info(f"{len(mods)} mods.")
     await session.close()

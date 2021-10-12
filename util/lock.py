@@ -51,7 +51,7 @@ def init_args():
 parser = init_args()
 args = parse_args(parser)
 
-timeout = aiohttp.ClientTimeout(total=0.5)
+timeout = aiohttp.ClientTimeout(total=1)
 retries = 5
 
 async def fetch_file(curseforge_url, mod, session, fileId):

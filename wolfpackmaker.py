@@ -18,7 +18,8 @@ from os.path import abspath, dirname, exists, join, getsize
 from pathlib import Path
 from pyfiglet import Figlet
 from rich.logging import RichHandler
-from rich.progress import Progress
+from rich.progress import BarColumn, DownloadColumn, Progress, TextColumn, TimeRemainingColumn, TransferSpeedColumn
+from rich.table import Column
 from rich.traceback import install as init_traceback
 
 log = logging.getLogger("rich")
@@ -109,24 +110,28 @@ def get_spinner():
         for cursor in "-/|\\":
             yield cursor
 
-async def save_mod(mod_filename, mod_downloadurl, session, spinner_char):
-    start = time.time()
-    with Progress() as progress:
-        progress_task = progress.add_task(description=f"Downloading {mod_filename}...")
+async def save_mod(mod_filename, mod_downloadurl, session, spinner_char, mod_name):
+    with Progress(
+        TextColumn("[progress.description]{task.description}", table_column=Column(ratio=8)),
+        TransferSpeedColumn(table_column=Column(ratio=4)),
+        DownloadColumn(table_column=Column(ratio=4)),
+        BarColumn(bar_width=None, table_column=Column(ratio=2)),
+        "[progress.percentage]{task.percentage:>3.0f}%",
+        TimeRemainingColumn(),
+        refresh_per_second=60,
+        expand=True
+    ) as progress:
+        progress_task = progress.add_task(description=f"Downloading {mod_name}...")
         download_count[0] += 1
         with session.get(mod_downloadurl, stream=True) as r:
             stream_length = int(r.headers['content-length'])
             progress.update(progress_task, total=stream_length)
             file = io.BytesIO()
-            for chunk in r.iter_content(65535):
-                chunk_size = len(chunk)
-                speed = (chunk_size // (time.time() - start) /
-                        1000000) > 1 and f'{chunk_size // (time.time() - start) / 1000000:.2f} MB/s' or f'{chunk_size // (time.time() - start) / 1000:.2f} KB/s'
+            for chunk in r.iter_content(65535):             
                 progress.update(progress_task,
                 # TODO: Test verification with actual corrupted files
                 # TODO: Fully fix it on Windows
-                description=f"> ({download_count[0]}/{len(to_process)}) {spinner_char} Downloading {mod_filename}... {chunk_size > 1000000 and chunk_size / 1000000 or chunk_size / 1000:.2f} {chunk_size > 1000000 and 'MB' or 'KB'}/{int(stream_length) > 1000000 and int(stream_length) / 1000000 or int(stream_length) / 1000:.2f} {int(stream_length) > 1000000 and 'MB' or 'KB'} {speed} ({(time.time() - start):.2f} elapsed)",
-                advance=len(chunk))
+                description=f"> {spinner_char} {mod_name}...", advance=len(chunk))
                 file.write(chunk)
             file.seek(0)
             with open(join(mods_cache_dir, mod_filename), 'wb') as f:
@@ -306,12 +311,12 @@ async def get_mods(clientonly=False, serveronly=False):
                 if not verified:
                     log.info(f"Failed to verify cached mod {filename}. Retrying...")
                     to_process.append(filename)
-                    tasks.append([filename, download_url, remote_size])
+                    tasks.append([filename, download_url, remote_size, m['name']])
                     continue
                 log.debug("Using cached {} from {}".format(filename, mods_cache_dir))
             else:
                 to_process.append(filename)
-                tasks.append([filename, download_url, remote_size])
+                tasks.append([filename, download_url, remote_size, m['name']])
     if tasks:
         from operator import itemgetter
         # Sort mods to download by filesize
@@ -322,7 +327,8 @@ async def get_mods(clientonly=False, serveronly=False):
             spinner_char = next(spinner)
             filename = file[0]
             download_url = file[1]
-            await save_mod(filename, download_url, session, spinner_char)
+            mod_name = file[3]
+            await save_mod(filename, download_url, session, spinner_char, mod_name)
         with Progress() as progress:
             total = len(to_process)
             verified_task = progress.add_task(description=f"Preparing to verify...", total=total)
