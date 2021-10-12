@@ -29,6 +29,7 @@ logging.basicConfig(
 log = logging.getLogger("rich")
 
 found_mods = []
+mod_slugs = []
 
 
 def parse_args(parser):
@@ -133,17 +134,17 @@ async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest, cf_data
             deps = []
             for dep in file["dependencies"]:
                 if dep["addonId"] in [m["id"] for m in found_mods]:
-                    continue
+                    break
                 deps += [d for d in cf_data if dep["addonId"] == d["id"] and dep["type"] == 3]
             dep_file_found = False
             for d in deps:
+                if d['slug'] in [m for m in mod_slugs]:
+                    break
                 log.info(f"Resolving dependency {d['name']} for mod {mod['name']}...")
                 for df in d["latest_files"]:
                     dep_file = await get_mod_file(curseforge_url, modpack_manifest, df, mc_version, d, session, dep_file_found)
                     if not dep_file: continue
                     dep_file_found = True
-                    if d["id"] in [m["id"] for m in found_mods]:
-                        continue
                     found_mods.append({
                         "id": d["id"],
                         "slug": d["slug"],
@@ -183,6 +184,7 @@ async def process_modpack_config():
     duplicate_mods = []
     for idx, mod in enumerate(mods):
         for k, v in mods[idx].items():
+            mod_slugs.append(k)
             duplicate_mods.append(k)
     if [k for k,v in Counter(duplicate_mods).items() if v>1]:
         sys.exit(log.error(f"Found duplicates in the manifest file. Please remove them before continuing:\n> {[k for k,v in Counter(duplicate_mods).items() if v>1]}"))

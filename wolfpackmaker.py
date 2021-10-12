@@ -102,11 +102,18 @@ cached_dir = join(parent_dir, '.wolfpackmaker')
 mods_cached = join(cached_dir, '.cached_mods.json')
 modpack_version_cached = join(cached_dir, '.modpack_version.txt')
 
+download_count = [0]
 
-async def save_mod(mod_filename, mod_downloadurl, session):
+def get_spinner():
+    while True:
+        for cursor in "-/|\\":
+            yield cursor
+
+async def save_mod(mod_filename, mod_downloadurl, session, spinner_char):
     start = time.time()
     with Progress() as progress:
         progress_task = progress.add_task(description=f"Downloading {mod_filename}...")
+        download_count[0] += 1
         with session.get(mod_downloadurl, stream=True) as r:
             stream_length = int(r.headers['content-length'])
             progress.update(progress_task, total=stream_length)
@@ -114,9 +121,11 @@ async def save_mod(mod_filename, mod_downloadurl, session):
             for chunk in r.iter_content(65535):
                 chunk_size = len(chunk)
                 speed = (chunk_size // (time.time() - start) /
-                        1000000) > 1 and f'{chunk_size // (time.time() - start) / 1000000} MB/s' or f'{chunk_size // (time.time() - start) / 1000} KB/s'
+                        1000000) > 1 and f'{chunk_size // (time.time() - start) / 1000000:.2f} MB/s' or f'{chunk_size // (time.time() - start) / 1000:.2f} KB/s'
                 progress.update(progress_task,
-                description=f"> Downloading {mod_filename}... {chunk_size > 1000000 and chunk_size / 1000000 or chunk_size / 1000} {chunk_size > 1000000 and 'MB' or 'KB'}/{int(stream_length) > 1000000 and int(stream_length) / 1000000 or int(stream_length) / 1000} {int(stream_length) > 1000000 and 'MB' or 'KB'} {speed} ({(time.time() - start):.2f} elapsed)",
+                # TODO: Test verification with actual corrupted files
+                # TODO: Fully fix it on Windows
+                description=f"> ({download_count[0]}/{len(to_process)}) {spinner_char} Downloading {mod_filename}... {chunk_size > 1000000 and chunk_size / 1000000 or chunk_size / 1000:.2f} {chunk_size > 1000000 and 'MB' or 'KB'}/{int(stream_length) > 1000000 and int(stream_length) / 1000000 or int(stream_length) / 1000:.2f} {int(stream_length) > 1000000 and 'MB' or 'KB'} {speed} ({(time.time() - start):.2f} elapsed)",
                 advance=len(chunk))
                 file.write(chunk)
             file.seek(0)
@@ -308,10 +317,12 @@ async def get_mods(clientonly=False, serveronly=False):
         # Sort mods to download by filesize
 
         tasks = sorted(tasks, key=itemgetter(2))
+        spinner = get_spinner()
         for file in reversed(tasks):
+            spinner_char = next(spinner)
             filename = file[0]
             download_url = file[1]
-            await save_mod(filename, download_url, session)
+            await save_mod(filename, download_url, session, spinner_char)
         with Progress() as progress:
             total = len(to_process)
             verified_task = progress.add_task(description=f"Preparing to verify...", total=total)
