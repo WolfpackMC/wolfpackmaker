@@ -260,7 +260,12 @@ async def process_modpack_config():
                 case {'id': id}:
                     to_complete[0] += 1
                     log.info(f"Using {id} for {k}. This should guarantee a positive match.")
-                    cf_get = await session.get(curseforge_url + str(id))
+                    for i in range(retries):
+                        try:
+                            cf_get = await session.get(curseforge_url + str(id), timeout=timeout)
+                            break
+                        except asyncio.TimeoutError:
+                            continue
                     data = await cf_get.json()
                     if k != data['slug']:
                         sys.exit(log.critical(f"Mod mismatch! {k} =/= {data['slug']}. This is usually impossible unless you are using the wrong mod ID."))
