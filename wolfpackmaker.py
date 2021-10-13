@@ -263,7 +263,7 @@ async def get_mods(clientonly=False, serveronly=False):
             copy_tree(cached_config_dir, config_dir)
             if exists(join(cached_config_dir, 'mmc-pack.json')):
                 log.info("Copying MultiMC JSON files...")
-                shutil.copy(join(cached_config_dir, 'mmc-pack.json'), parent_dir)
+                shutil.copy(join(cached_config_dir, 'mmc-pack.json'), current_dir)
         mods = json.loads(assets_list.get('manifest.lock'))
     else:
         if args.repo is not None and exists(args.repo):
