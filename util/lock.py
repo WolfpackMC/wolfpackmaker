@@ -1,4 +1,5 @@
 import io
+import os
 import aiohttp
 import argparse
 import asyncio
@@ -324,8 +325,13 @@ def main():
     args = parse_args(parser)
     fancy_intro(log, args.with_figlet, args.with_figlet and parser.description)
     loop = asyncio.get_event_loop()
-    if 'yml' in args.manifest:
-        args.manifest = open(args.manifest).read()
+    if args.manifest:
+        if 'yml' in args.manifest:
+            args.manifest = open(args.manifest).read()
+    else:
+        if os.path.exists('manifest.yml'):
+            with open('manifest.yml') as f:
+                args.manifest = f.read()
     task = loop.create_task(process_modpack_config(manifest=args.manifest))
     loop.run_until_complete(task)
     save_lockfile()
