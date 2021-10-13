@@ -155,18 +155,20 @@ async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest, cf_data
                 if d['slug'] in [m for m in mod_slugs]:
                     break
                 log.info(f"Resolving dependency {d['name']} for mod {mod['name']}...")
+                mod_slugs.append(d['slug'])
                 for df in d["latest_files"]:
                     dep_file = await get_mod_file(curseforge_url, modpack_manifest, df, mc_version, d, session, dep_file_found)
                     if not dep_file: continue
                     dep_file_found = True
-                    found_mods.append({
-                        "id": d["id"],
-                        "slug": d["slug"],
-                        "name": d["name"],
-                        "downloadUrl": dep_file["downloadUrl"],
-                        "filename": dep_file["fileName"],
-                        "fileLength": dep_file["fileLength"]
-                    })
+                    if d['slug'] not in [m for m in mod_slugs]:
+                        found_mods.append({
+                            "id": d["id"],
+                            "slug": d["slug"],
+                            "name": d["name"],
+                            "downloadUrl": dep_file["downloadUrl"],
+                            "filename": dep_file["fileName"],
+                            "fileLength": dep_file["fileLength"]
+                        })
             for m in found_mods:
                 if m.get('downloadUrl') is not None:
                     continue
