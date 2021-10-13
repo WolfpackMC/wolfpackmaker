@@ -47,10 +47,6 @@ def init_args():
     parser.add_argument('--with-figlet', help='Defaults to True. Use Figlet when printing the wolfpackmaker intro')
     return parser
 
-
-parser = init_args()
-args = parse_args(parser)
-
 timeout = aiohttp.ClientTimeout(total=1)
 retries = 5
 
@@ -69,6 +65,23 @@ async def fetch_file(curseforge_url, mod, session, fileId):
             log.info(f"Retrying {mod['name']} ({i+1} of {retries})...")
             continue
     return file
+
+
+async def set_content_length(curseforge_url, session, mod_slug):
+    async with session.get(curseforge_url) as r:
+        content_length = int()
+        try:
+            content_length = int(r.headers['content-length'])
+        except KeyError:
+            log.warning("Could not get Content-Length directly, getting it ourselves...")
+            async for chunk in r.content.iter_any():
+                content_length += len(chunk)
+            log.info(content_length)
+
+    for m in found_mods:
+        if mod_slug == m['slug']:
+            log.info(f"Appended file length to {m['name']}")
+            m.update({"fileLength": content_length})
 
 
 async def fetch_mod(curseforge_url, mod_id, session):
@@ -108,7 +121,7 @@ async def get_mod_file(curseforge_url, modpack_manifest, version, mc_version, mo
     if version["gameVersion"] in mc_version:
         file_id = version["projectFileId"]
         file = await fetch_file(curseforge_url, mod, session, file_id)
-        return file
+    return file
 
 
 async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest, cf_data, completed, to_complete):
@@ -125,6 +138,7 @@ async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest, cf_data
         try:
             latest_files = mod['gameVersionLatestFiles']
         except KeyError:
+            log.info(mod)
             latest_files = mod['latestFiles']
     
     for version in latest_files:
@@ -165,20 +179,10 @@ async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest, cf_data
             f"Mod {mod['slug']} [{mod['name']}] does not have an apparent version for {mc_version}, tread with caution")
 
 
-async def process_modpack_config():
+async def process_modpack_config(manifest):
     chunked = True  # Should chunk
     curseforge_url = 'https://addons-ecs.forgesvc.net/api/v2/addon/'
-    try:
-        open(args.manifest)
-    except TypeError:
-        pass
-    except FileNotFoundError:
-        log.critical('{} was not found. Make sure the directory is correct.'.format(args.manifest))
-        log.info("Defaulting to manifest.yml. Waiting 3 seconds...")
-        await asyncio.sleep(3)
-        args.manifest = 'manifest.yml'
-    with open(args.manifest or 'manifest.yml', 'r') as f:
-        modpack_manifest = yaml.load(f.read(), Loader=yaml.SafeLoader)
+    modpack_manifest = yaml.load(manifest, Loader=yaml.SafeLoader)
     mods = modpack_manifest["mods"]
     # check for duplicates
     duplicate_mods = []
@@ -233,39 +237,12 @@ async def process_modpack_config():
             custom = [False]
             has_id = [False]
             match v:
-                case {'url': url}:
-                    try:
-                        async with session.get(url) as r:
-                            content_length = r.headers['content-length']
-                    except KeyError:
-                        sys.exit(log.critical(f"Couldn't find content length for {k}. Why...?"))
-                    content_length = int(content_length)
-                    found_mods.append({
-                        "id": mod_data['id'] or None,
-                        "name": mod_data['name'] or k,
-                        "slug": k,
-                        # the = is for optifine
-                        "filename": '=' in url and url.split("=")[1] or basename(url),
-                        "downloadUrl": url,
-                        "clientonly": client_only,
-                        "serveronly": server_only,
-                        "optional": optional,
-                        "custom": True,
-                        "fileLength": content_length,
-                    })
-                    to_complete[0] += 1
-                    completed[0] += 1
-                    log.info(f"[LOCK] [{completed[0]}/{to_complete[0]}] Resolved {mod_data['name']}, using custom URL {url}")
-                    custom[0] = True
                 case {'id': id}:
+                    if mod_data:
+                        continue
                     to_complete[0] += 1
                     log.info(f"Using {id} for {k}. This should guarantee a positive match.")
-                    for i in range(retries):
-                        try:
-                            cf_get = await session.get(curseforge_url + str(id), timeout=timeout)
-                            break
-                        except asyncio.TimeoutError:
-                            continue
+                    cf_get = await session.get(curseforge_url + str(id))
                     data = await cf_get.json()
                     if k != data['slug']:
                         sys.exit(log.critical(f"Mod mismatch! {k} =/= {data['slug']}. This is usually impossible unless you are using the wrong mod ID."))
@@ -281,6 +258,36 @@ async def process_modpack_config():
                     task = asyncio.create_task(fetch_mod_data(curseforge_url, data, session, modpack_manifest, curseforge_data, completed, to_complete))
                     tasks.append(task)
                     has_id[0] = True
+                case {'url': url}:
+                    task = asyncio.create_task(set_content_length(url, session, k))
+                    tasks.append(task)
+                    if url.split('.')[-1] == 'zip':
+                        log.info(f"Handling resourcepack {k}...")
+                        found_mods.append({
+                            "id": mod_data['id'] or None,
+                            "name": k,
+                            "slug": k,
+                            "filename": basename(url),
+                            "downloadUrl": url,
+                            "resourcepack": True
+                        })
+                        continue
+                    found_mods.append({
+                        "id": mod_data['id'] or None,
+                        "name": mod_data['name'] or k,
+                        "slug": k,
+                        # the = is for optifine
+                        "filename": '=' in url and url.split("=")[1] or basename(url),
+                        "downloadUrl": url,
+                        "clientonly": client_only,
+                        "serveronly": server_only,
+                        "optional": optional,
+                        "custom": True,
+                    })
+                    to_complete[0] += 1
+                    completed[0] += 1
+                    log.info(f"[LOCK] [{completed[0]}/{to_complete[0]}] Resolved {mod_data['name']}, using custom URL {url}")
+                    custom[0] = True
             if has_id[0]: continue
             if custom[0]: continue
             to_complete[0] += 1
@@ -295,9 +302,9 @@ async def process_modpack_config():
             })
             task = asyncio.create_task(fetch_mod_data(curseforge_url, mod_data, session, modpack_manifest, curseforge_data, completed, to_complete))
             tasks.append(task)
-
     await asyncio.gather(*tasks)
     await session.close()
+    return found_mods
 
 
 def save_lockfile():
@@ -311,9 +318,11 @@ def save_lockfile():
 
 def main():
     init_traceback()
+    parser = init_args()
+    args = parse_args(parser)
     fancy_intro(log, args.with_figlet, args.with_figlet and parser.description)
     loop = asyncio.get_event_loop()
-    task = loop.create_task(process_modpack_config())
+    task = loop.create_task(process_modpack_config(manifest=args.manifest))
     loop.run_until_complete(task)
     save_lockfile()
     sys.exit()

@@ -72,6 +72,7 @@ def init_args():
     parser.add_argument('-r', '--repo', help='Wolfpack modpack repository from https://git.kalka.io e.g'
                                              '--repo Odin, from https://git.kalka.io/Wolfpack/Odin')
     parser.add_argument('-mmc', '--multimc', help='Enable MultiMC setup.', action='store_true')
+    parser.add_argument('-mc', '--minecraft-dir', help='Specify custom minecraft dir. Defaults to .minecraft', default='.minecraft')
     parser.add_argument('-d', '--download', help='Custom download directory')
     parser.add_argument('--cache', help='Custom cache directory')
     parser.add_argument('-c', '--clientonly', help='Enable clientonly.', action='store_true', default=False)
@@ -88,17 +89,21 @@ repo = args.repo
 github_api = "https://api.github.com/repos/{}/{}/releases"
 github_files = ['manifest.lock', 'config.zip']
 
-parent_dir = dirname(dirname(abspath(__file__)))
-current_dir = dirname(abspath(__file__))
+parent_dir = dirname(getcwd())
+current_dir = getcwd()
+minecraft_dir = join(current_dir, args.minecraft_dir)
 if args.download:
     mods_dir = join(current_dir, args.download)
 else:
-    mods_dir = join(parent_dir, '.minecraft/mods')
+    mods_dir = join(minecraft_dir, 'mods')
+
+resourcepack_dir = join(minecraft_dir, 'resourcepacks')
+
 if args.cache:
     mods_cache_dir = join(current_dir, args.cache)
 else:
     mods_cache_dir = join(dirname(parent_dir), '.mods_cached')
-config_dir = join(parent_dir, '.minecraft/config')
+config_dir = join(minecraft_dir, 'config')
 cached_dir = join(parent_dir, '.wolfpackmaker')
 mods_cached = join(cached_dir, '.cached_mods.json')
 modpack_version_cached = join(cached_dir, '.modpack_version.txt')
@@ -109,6 +114,16 @@ def get_spinner():
     while True:
         for cursor in "-/|\\":
             yield cursor
+
+
+async def retry_mod(mod_filename, mod_downloadurl, session):
+    with session.get(mod_downloadurl, stream=True) as r:
+        file = io.BytesIO()
+        for chunk in r.iter_content(65535):
+            file.write(chunk)
+        file.seek(0)
+        with open(join(mods_cache_dir, mod_filename), 'wb') as f:
+            f.write(file.getbuffer())
 
 async def save_mod(mod_filename, mod_downloadurl, session, spinner_char, mod_name):
     with Progress(
@@ -124,15 +139,22 @@ async def save_mod(mod_filename, mod_downloadurl, session, spinner_char, mod_nam
         progress_task = progress.add_task(description=f"Downloading {mod_name}...")
         download_count[0] += 1
         with session.get(mod_downloadurl, stream=True) as r:
-            stream_length = int(r.headers['content-length'])
-            progress.update(progress_task, total=stream_length)
             file = io.BytesIO()
-            for chunk in r.iter_content(65535):             
+            try:
+                stream_length = int(r.headers['content-length'])
+                stream_length_found = True
+            except KeyError:
+                stream_length_found = False
+                stream_length = 0
+            for chunk in r.iter_content(65535):
+                file.write(chunk)
+                if not stream_length_found:
+                    stream_length += len(chunk)
                 progress.update(progress_task,
                 # TODO: Test verification with actual corrupted files
                 # TODO: Fully fix it on Windows
                 description=f"> {spinner_char} {mod_name}...", advance=len(chunk))
-                file.write(chunk)
+                progress.update(progress_task, total=stream_length)
             file.seek(0)
             with open(join(mods_cache_dir, mod_filename), 'wb') as f:
                 f.write(file.getbuffer())
@@ -199,6 +221,7 @@ def process_lockfile(lockfile, clientonly=False, serveronly=False):
 
 def create_folders():
     Path(mods_dir).mkdir(parents=True, exist_ok=True)
+    Path(resourcepack_dir).mkdir(parents=True, exist_ok=True)
     Path(cached_dir).mkdir(parents=True, exist_ok=True)
     Path(mods_cache_dir).mkdir(parents=True, exist_ok=True)
     Path(join(cached_dir, 'cached_config')).mkdir(parents=True, exist_ok=True)
@@ -280,6 +303,16 @@ async def get_mods(clientonly=False, serveronly=False):
             log.critical(f" Detected version {platform.version().lower()}! It's probably Cee...")
     log.info("Verifying cached mods...")
     for m in mods:
+        try:
+            m['resourcepack']
+            log.info(f"Saving resourcepack {m['name']}...")
+            resourcepack_r = session.get(f"{m['downloadUrl']}")
+            print(join(resourcepack_dir, m['filename']))
+            with open(join(resourcepack_dir, m['filename']), 'wb') as f:
+                f.write(resourcepack_r.content)
+            continue
+        except KeyError:
+            pass
         filename = m.get("filename")
         if filename is None:
             log.warning(f"Couldn't find a download file for {m.get('slug')}... this is usually Kalka's fault")
@@ -341,7 +374,7 @@ async def get_mods(clientonly=False, serveronly=False):
                 verified = local_size == remote_size
                 while not verified:
                     log.info(f"Failed to verify cached mod {filename}. Retrying...")
-                    await save_mod(filename, download_url, session)
+                    await retry_mod(filename, download_url, session)
                     local_size = getsize(join(mods_cache_dir, filename))
                     verified = local_size == remote_size
                 processed += 1
