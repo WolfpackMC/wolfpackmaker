@@ -89,8 +89,8 @@ repo = args.repo
 github_api = "https://api.github.com/repos/{}/{}/releases"
 github_files = ['manifest.lock', 'config.zip']
 
-parent_dir = dirname(getcwd())
-current_dir = getcwd()
+current_dir = dirname(getcwd())
+parent_dir = dirname(current_dir)
 minecraft_dir = join(current_dir, args.minecraft_dir)
 if args.download:
     mods_dir = join(current_dir, args.download)
