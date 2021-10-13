@@ -121,7 +121,7 @@ async def get_mod_file(curseforge_url, modpack_manifest, version, mc_version, mo
     if version["gameVersion"] in mc_version:
         file_id = version["projectFileId"]
         file = await fetch_file(curseforge_url, mod, session, file_id)
-    return file
+        return file
 
 
 async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest, cf_data, completed, to_complete):
@@ -322,6 +322,8 @@ def main():
     args = parse_args(parser)
     fancy_intro(log, args.with_figlet, args.with_figlet and parser.description)
     loop = asyncio.get_event_loop()
+    if 'yml' in args.manifest:
+        args.manifest = open(args.manifest).read()
     task = loop.create_task(process_modpack_config(manifest=args.manifest))
     loop.run_until_complete(task)
     save_lockfile()
