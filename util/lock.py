@@ -128,9 +128,9 @@ async def get_mod_file(curseforge_url, modpack_manifest, version, mc_version, mo
 async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest, cf_data, completed, to_complete):
     start_time = time.time()
     mc_version = [modpack_manifest["version"]]
-    if "1.16.5" in mc_version:
-        for i in range(1, 5):
-            mc_version.append(f"1.16.{i}")
+    # if "1.16.5" in mc_version:
+    #     for i in range(1, 5):
+    #         mc_version.append(f"1.16.{i}")
     file_found = False
 
     try:
