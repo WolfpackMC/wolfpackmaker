@@ -222,16 +222,6 @@ class Wolfpackmaker:
             assets_list, modpack_version = await self.get_github_data()
             if self.args.multimc:
                 ignored_cache = []
-                self.log.info("Cleaning mods folder...")
-                start_time = time.time()
-                for f in listdir(self.mods_dir):  #temporary
-                    try:
-                        remove(join(self.mods_dir, f))
-                    except PermissionError:
-                        pass
-                    except IsADirectoryError:
-                        pass
-                self.log.info(f"Finished in {time.time() - start_time}s.")
                 self.log.info("Updating config...")
                 config_bytes = io.BytesIO(assets_list.get('config.zip'))
                 config_zip = zipfile.ZipFile(config_bytes)
