@@ -247,7 +247,7 @@ class Wolfpackmaker:
                         self.log.info(f"Ignoring {c}...")
                         remove(join(cached_config_dir, c))
                 self.log.info("Copying new config to directory...")
-                shutil.copytree(cached_config_dir, self.config_dir)
+                shutil.copytree(cached_config_dir, self.config_dir, dirs_exist_ok=True)
                 if exists(join(cached_config_dir, 'mmc-pack.json')):
                     self.log.info("Copying MultiMC JSON files...")
                     shutil.copy(join(cached_config_dir, 'mmc-pack.json'), self.current_dir)
