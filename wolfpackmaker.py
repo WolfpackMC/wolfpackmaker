@@ -422,6 +422,7 @@ if __name__ == "__main__":
     w.main()
     w.create_folders()
     w.assemble_logger()
+    w.fancy_intro()
     w.log.info(f"Wolfpackmaker / {Wolfpackmaker.VERSION}")
     w.loop = asyncio.new_event_loop()
     w.loop.run_until_complete(
