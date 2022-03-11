@@ -194,7 +194,7 @@ async def process_modpack_config(manifest):
             duplicate_mods.append(k)
     if [k for k,v in Counter(duplicate_mods).items() if v>1]:
         sys.exit(log.error(f"Found duplicates in the manifest file. Please remove them before continuing:\n> {[k for k,v in Counter(duplicate_mods).items() if v>1]}"))
-    curseforge_download_url = "https://get.kalka.io/curseforge.json"
+    curseforge_download_url = "https://vulpera.com/curseforge.json"
     session = aiohttp.ClientSession()
     log.debug(f"Established session {session}")
     log.info(f"Reading CurseForge data from {curseforge_download_url}")
