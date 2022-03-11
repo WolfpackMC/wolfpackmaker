@@ -153,6 +153,9 @@ class Wolfpackmaker:
                 file.seek(0)
                 with open(join(self.mods_cache_dir, mod_filename), 'wb') as f:
                     f.write(file.getbuffer())
+                file.seek(0)
+                with open(join(self.mods_dir, mod_filename), 'wb') as f:
+                    f.write(file.getbuffer())
 
     async def get_raw_data(self, url, to_json=False):
         with self.session.get(url) as r:
@@ -318,22 +321,28 @@ class Wolfpackmaker:
             self.to_copy_process.append(filename)
             download_url = m['downloadUrl']
             remote_size = m['fileLength']
-            if not exists(join(self.mods_dir, filename)) or not exists(
-                    join(self.mods_cache_dir, filename)):  # if it does not exist in the folder
-                if exists(join(self.mods_cache_dir, filename)):
-                    # verify mods
-                    processed = 0
+            if exists(join(self.mods_cache_dir, filename)):
+                # verify mods
+                processed = 0
+                try:
                     local_size = getsize(join(self.mods_cache_dir, filename))
-                    verified = local_size == remote_size
-                    if not verified:
-                        self.log.info(f"Failed to verify cached mod {filename}. Retrying...")
-                        self.to_process.append(filename)
-                        tasks.append([filename, download_url, remote_size, m['name']])
-                        continue
-                    self.log.debug("Using cached {} from {}".format(filename, self.mods_cache_dir))
-                else:
+                except FileNotFoundError:
+                    local_size = 0
+                try:
+                    mod_dir_size = getsize(join(self.mods_dir, filename))
+                except FileNotFoundError:
+                    mod_dir_size = 0
+                verified = (local_size == remote_size) and (mod_dir_size == remote_size)
+                if not verified:
+                    mismatch_size = (local_size != remote_size and abs(local_size - remote_size)) or (mod_dir_size != remote_size and abs(mod_dir_size - remote_size))
+                    self.log.info(f"Failed to verify cached mod {filename} ({mismatch_size} byte mismatch). Retrying...")
                     self.to_process.append(filename)
                     tasks.append([filename, download_url, remote_size, m['name']])
+                    continue
+                self.log.debug("Using cached {} from {}".format(filename, self.mods_cache_dir))
+            else:
+                self.to_process.append(filename)
+                tasks.append([filename, download_url, remote_size, m['name']])
         if tasks:
             from operator import itemgetter
             # Sort mods to download by filesize
@@ -353,7 +362,14 @@ class Wolfpackmaker:
                 for file in reversed(tasks):
                     filename = file[0]
                     download_url = file[1]
-                    local_size = getsize(join(self.mods_cache_dir, filename))
+                    try:
+                        local_size = getsize(join(self.mods_cache_dir, filename))
+                    except FileNotFoundError:
+                        local_size = 0
+                    try:
+                        mod_dir_size = getsize(join(self.mods_dir, filename))
+                    except FileNotFoundError:
+                        mod_dir_size = 0
                     remote_size = file[2]
                     verified = local_size == remote_size
                     while not verified:
@@ -361,23 +377,18 @@ class Wolfpackmaker:
                         await self.retry_mod(filename, download_url)
                         local_size = getsize(join(self.mods_cache_dir, filename))
                         verified = local_size == remote_size
+                    verified_mod_dir = mod_dir_size == remote_size
+                    while not verified_mod_dir:
+                        self.log.info(f"Failed to verify mod {filename} in mod directory. Retrying...")
+                        await self.retry_mod(filename, download_url)
+                        mod_dir_size = getsize(join(self.mods_dir, filename))
+                        verified = mod_dir_size == remote_size
                     processed += 1
                     progress.update(verified_task, description=f"> Verified {filename}. ({processed}/{total})", advance=1)
                 self.to_process.remove(file[0])
         else:
             self.log.debug("We do not have any mods to process.")
         self.session.close()
-        processed = 0
-        with Progress() as progress:
-            total = len(self.to_copy_process)
-            copy_task = progress.add_task(description=f"Copying mods... ({processed}/{total}", total=total)
-            for m in self.to_copy_process:
-                file = m
-                if not exists(join(self.mods_cache_dir, m)):
-                    shutil.copy(join(self.mods_cache_dir, m), join(self.mods_dir, m))
-                    processed += 1
-                    progress.update(copy_task, description=f"> Copied {m}. ({processed}/{total})", advance=1)
-                self.to_copy_process.remove(file)
         self.log.info("Writing cached mod list to {}...".format(self.mods_cached))
         with open(self.mods_cached, 'w') as f:
             f.write(json.dumps(cached_mods))
@@ -412,10 +423,8 @@ if __name__ == "__main__":
     w.create_folders()
     w.assemble_logger()
     w.log.info(f"Wolfpackmaker / {Wolfpackmaker.VERSION}")
-    w.loop = asyncio.get_event_loop()
-    inspect(w)
+    w.loop = asyncio.new_event_loop()
     w.loop.run_until_complete(
         w.get_mods(w.args.clientonly, w.args.serveronly)
     )
-    inspect(w)
     w.log.info("We're done here.")
