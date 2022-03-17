@@ -67,6 +67,9 @@ class Log(Console):
         finally:
             try:
                 mkdir(self.log_cache)
+            except FileNotFoundError as e:
+                self.warn(f"Could not save logfile {self.log_cache} with the error {e}.")
+                return
             except FileExistsError:
                 pass
         self.debug("Saving log...")
