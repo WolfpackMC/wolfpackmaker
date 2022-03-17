@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - run: apt install curl python3
+      - uses: actions/setup-python@v2
       - run: python3 -m ensurepip
       - run: python3 -m pip install -r requirements.txt
       - run: python3 util/curseforgedb.py
@@ -28,7 +28,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
     - run: 'uname -a'
+    - run: 'python -VVVVVVV'
 
   docker-build:
     runs-on: ubuntu-20.04
