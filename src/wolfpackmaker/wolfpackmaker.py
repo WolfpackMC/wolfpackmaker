@@ -74,6 +74,7 @@ class Wolfpackmaker:
         self.parser.add_argument('--cache', help='Custom cache directory')
         self.parser.add_argument('-c', '--clientonly', help='Enable clientonly.', action='store_true', default=False)
         self.parser.add_argument('-s', '--serveronly', help='Enable serveronly.', action='store_true', default=False)
+        self.parser.add_argument('-t', '--test', help='Test mode only Does not save any mod jars.', action='store_true', default=False)
         self.parser.add_argument('-rs', '--release', help='Get release name.', default='latest')
         self.parser.add_argument('--dir', help=f'Custom directory for Wolfpackmaker. Defaults to {dirname(getcwd())}')
     
@@ -236,7 +237,7 @@ class Wolfpackmaker:
                         mods = json.loads(f.read())
                 else:
                     sys.exit(self.log.critical(f"Custom lockfile not found: {self.args.repo}"))
-        tasks = []
+        self.tasks = []
         cached_mod_ids = []
         cached_mods = []
         if exists(self.mods_cached):
@@ -327,43 +328,47 @@ class Wolfpackmaker:
                 download_url = file[1]
                 mod_name = file[3]
                 await self.save_mod(filename, download_url, spinner_char, mod_name)
-            with Progress() as progress:
-                total = len(self.to_process)
-                verified_task = progress.add_task(description=f"Preparing to verify...", total=total)
-                processed = 0
-                for file in reversed(tasks):
-                    filename = file[0]
-                    download_url = file[1]
-                    try:
-                        local_size = getsize(join(self.mods_cache_dir, filename))
-                    except FileNotFoundError:
-                        local_size = 0
-                    try:
-                        mod_dir_size = getsize(join(self.mods_dir, filename))
-                    except FileNotFoundError:
-                        mod_dir_size = 0
-                    remote_size = file[2]
-                    verified = local_size == remote_size
-                    while not verified:
-                        self.log.info(f"Failed to verify cached mod {filename}. Retrying...")
-                        await self.retry_mod(filename, download_url)
-                        local_size = getsize(join(self.mods_cache_dir, filename))
-                        verified = local_size == remote_size
-                    verified_mod_dir = mod_dir_size == remote_size
-                    while not verified_mod_dir:
-                        self.log.info(f"Failed to verify mod {filename} in mod directory. Retrying...")
-                        await self.retry_mod(filename, download_url)
-                        mod_dir_size = getsize(join(self.mods_dir, filename))
-                        verified = mod_dir_size == remote_size
-                    processed += 1
-                    progress.update(verified_task, description=f"> Verified {filename}. ({processed}/{total})", advance=1)
-                self.to_process.remove(file[0])
+            if not self.args.test:
+                self.verify_mods()
         else:
             self.log.debug("We do not have any mods to process.")
         self.session.close()
         self.log.info("Writing cached mod list to {}...".format(self.mods_cached))
         with open(self.mods_cached, 'w') as f:
             f.write(json.dumps(cached_mods))
+    
+    async def verify_mods(self):
+        with Progress() as progress:
+            total = len(self.to_process)
+            verified_task = progress.add_task(description=f"Preparing to verify...", total=total)
+            processed = 0
+            for file in reversed(self.tasks):
+                filename = file[0]
+                download_url = file[1]
+                try:
+                    local_size = getsize(join(self.mods_cache_dir, filename))
+                except FileNotFoundError:
+                    local_size = 0
+                try:
+                    mod_dir_size = getsize(join(self.mods_dir, filename))
+                except FileNotFoundError:
+                    mod_dir_size = 0
+                remote_size = file[2]
+                verified = local_size == remote_size
+                while not verified:
+                    self.log.info(f"Failed to verify cached mod {filename}. Retrying...")
+                    await self.retry_mod(filename, download_url)
+                    local_size = getsize(join(self.mods_cache_dir, filename))
+                    verified = local_size == remote_size
+                verified_mod_dir = mod_dir_size == remote_size
+                while not verified_mod_dir:
+                    self.log.info(f"Failed to verify mod {filename} in mod directory. Retrying...")
+                    await self.retry_mod(filename, download_url)
+                    mod_dir_size = getsize(join(self.mods_dir, filename))
+                    verified = mod_dir_size == remote_size
+                processed += 1
+                progress.update(verified_task, description=f"> Verified {filename}. ({processed}/{total})", advance=1)
+            self.to_process.remove(file[0])
 
 
 def get_spinner():
@@ -383,4 +388,4 @@ if __name__ == "__main__":
         w.get_mods(w.args.clientonly, w.args.serveronly)
     )
     w.log.info("We're done here.")
-    w.log.save_log()
+    w.log.save_log("wolfpackmaker")
