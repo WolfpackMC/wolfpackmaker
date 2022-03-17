@@ -22,6 +22,6 @@ set python_bin=%install_dir%\%python_dir%\tools\python
 echo "Updating wolfpackmaker.py..."
 powershell -Command "Invoke-WebRequest https://raw.githubusercontent.com/kalkafox/wolfpackmaker/master/wolfpackmaker.py -OutFile ..\wolfpackmaker\wolfpackmaker.py"
 
-%python_bin% ..\wolfpackmaker\wolfpackmaker.py %*
+%python_bin% ..\src\wolfpackmaker\wolfpackmaker.py %*
 EXIT /B %ERRORLEVEL%
 
