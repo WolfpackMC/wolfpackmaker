@@ -123,14 +123,16 @@ class Wolfpackmaker:
                     stream_length = 0
                 progress.update(progress_task, total=stream_length)
                 for chunk in r.iter_content(65535):
-                    file.write(chunk)
+                    if not self.args.test:
+                        file.write(chunk)
                     progress.update(progress_task, description=f"> {spinner_char} {mod_name}...", advance=len(chunk))
-                file.seek(0)
-                with open(join(self.mods_cache_dir, mod_filename), 'wb') as f:
-                    f.write(file.getbuffer())
-                file.seek(0)
-                with open(join(self.mods_dir, mod_filename), 'wb') as f:
-                    f.write(file.getbuffer())
+                if not self.args.test:
+                    file.seek(0)
+                    with open(join(self.mods_cache_dir, mod_filename), 'wb') as f:
+                        f.write(file.getbuffer())
+                    file.seek(0)
+                    with open(join(self.mods_dir, mod_filename), 'wb') as f:
+                        f.write(file.getbuffer())
 
     async def get_raw_data(self, url, to_json=False):
         with self.session.get(url) as r:
