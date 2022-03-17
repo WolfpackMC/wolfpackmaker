@@ -14,20 +14,14 @@ import yaml
 from aiohttp.client_exceptions import ContentTypeError
 from collections import Counter
 from os.path import basename
-from rich.logging import RichHandler
 from rich.traceback import install as init_traceback
-
-from fancy_intro import fancy_intro
+from util import Log
 
 TYPE_FABRIC = 4
 TYPE_FORGE = 1
 
-# noinspection PyArgumentList
-logging.basicConfig(
-    level=logging.DEBUG, format="%(message)s", datefmt="[%X]", handlers=[RichHandler(rich_tracebacks=True)]
-)
 
-log = logging.getLogger("rich")
+log = Log()
 
 found_mods = []
 mod_slugs = []
@@ -317,16 +311,24 @@ def save_lockfile():
     with open('manifest.json', 'w') as f:
         f.write(json.dumps(found_mods, indent=2))
 
+import requests
+
+import sys
+
+from rich import inspect
 
 def main():
     init_traceback()
     parser = init_args()
     args = parse_args(parser)
-    fancy_intro(log, args.with_figlet, args.with_figlet and parser.description)
-    loop = asyncio.get_event_loop()
+    log.parse_log(args)
+    log.fancy_intro(parser.description)
+    loop = asyncio.new_event_loop()
     if args.manifest:
-        if 'yml' in args.manifest:
+        if 'yml' and not 'https' in args.manifest:
             args.manifest = open(args.manifest).read()
+        elif 'https' and 'yml' in args.manifest:
+            args.manifest = requests.get(args.manifest).text
     else:
         if os.path.exists('manifest.yml'):
             with open('manifest.yml') as f:
@@ -334,6 +336,7 @@ def main():
     task = loop.create_task(process_modpack_config(manifest=args.manifest))
     loop.run_until_complete(task)
     save_lockfile()
+    log.save_log("lock")
     sys.exit()
 
 

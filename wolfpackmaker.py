@@ -4,32 +4,29 @@ import argparse
 import asyncio
 import io
 import json
-import logging
-import owoify
 import platform
 import shutil
 import sys
-import time
-import random
 import requests
 import zipfile
+from appdirs import user_cache_dir
 from os import getcwd, listdir, remove
 from os.path import abspath, dirname, exists, join, getsize
 from pathlib import Path
-from pyfiglet import Figlet
-from rich.logging import RichHandler
 from rich.progress import BarColumn, DownloadColumn, Progress, TextColumn, TimeRemainingColumn, TransferSpeedColumn
 from rich.table import Column
 from rich.traceback import install as init_traceback
+from util import Log
+
 
 class Wolfpackmaker:
     VERSION = '1.0.0'
-    log = logging.getLogger("rich")
-    f = Figlet()
+    log = Log()
 
     def main(self):
         self.init_args()
         self.parse_args()
+        self.log.parse_log(self.args)
 
         self.repo_info = {
             'user': "WolfpackMC",
@@ -60,22 +57,6 @@ class Wolfpackmaker:
         self.session.headers.update(self.headers)
 
 
-    def fancy_intro(self):
-        f = Figlet()
-        self.log.info(str('').join(['####' for _ in range(16)]))
-        self.log.info(f.renderText(("woofmc.xyz")))
-        keywords = random.choice(
-            ['A custom made Minecraft modpack script. Nothing special, hehe.',
-            'Please don\'t tell anyone about this...',
-            'Hehe. UwU, It\'s all we have, I know. I\'m sorry!',
-            'I should probably get a better idea for this list...',
-            'Not sponsored by Awoos!'
-            ]
-        )
-        self.log.info(owoify.owoify(keywords))
-        self.log.info(str('').join(['####' for _ in range(16)]))
-
-
     def parse_args(self):
         self.args = self.parser.parse_args()
 
@@ -85,8 +66,8 @@ class Wolfpackmaker:
             description='Wolfpackmaker (https://woofmc.xyz)'
         )
         self.parser.add_argument('-v', '--verbose', help='Increase output verbosity.', action='store_true')
-        self.parser.add_argument('-r', '--repo', help='Wolfpack modpack repository from https://git.kalka.io e.g'
-                                                '--repo Odin, from https://git.kalka.io/Wolfpack/Odin')
+        self.parser.add_argument('-r', '--repo', help='Wolfpack modpack repository from https://github.com/WolfpackMC e.g'
+                                                '--repo Wolfpack-Odin, from https://git.kalka.io/WolfpackMC/Wolfpack-Odin')
         self.parser.add_argument('-mmc', '--multimc', help='Enable MultiMC setup.', action='store_true')
         self.parser.add_argument('-mc', '--minecraft-dir', help='Specify custom minecraft dir. Defaults to .minecraft', default='.minecraft')
         self.parser.add_argument('-d', '--download', help='Custom download directory')
@@ -99,12 +80,12 @@ class Wolfpackmaker:
     def assemble_directories(self):
         self.current_dir = self.args.dir and self.args.dir or dirname(getcwd())
         self.parent_dir = dirname(self.current_dir)
-        self.cached_dir = join(self.current_dir, '.wolfpackmaker')
+        self.cached_dir = user_cache_dir('wolfpackmaker')
         self.minecraft_dir = join(self.current_dir, self.args.minecraft_dir)
 
         self.mods_dir = self.args.download and join(self.current_dir, self.args.download) or join(self.minecraft_dir, 'mods')
 
-        self.mods_cache_dir = self.args.cache and join(self.current_dir, self.args.cache) or join(self.current_dir, self.cached_dir)
+        self.mods_cache_dir = self.args.cache and join(self.current_dir, self.args.cache) or join(self.cached_dir, 'mods')
 
         self.resourcepack_dir = join(self.minecraft_dir, 'resourcepacks')
         self.config_dir = join(self.minecraft_dir, 'config')
@@ -137,19 +118,12 @@ class Wolfpackmaker:
                 file = io.BytesIO()
                 try:
                     stream_length = int(r.headers['content-length'])
-                    stream_length_found = True
                 except KeyError:
-                    stream_length_found = False
                     stream_length = 0
+                progress.update(progress_task, total=stream_length)
                 for chunk in r.iter_content(65535):
                     file.write(chunk)
-                    if not stream_length_found:
-                        stream_length += len(chunk)
-                    progress.update(progress_task,
-                    # TODO: Test verification with actual corrupted files
-                    # TODO: Fully fix it on Windows
-                    description=f"> {spinner_char} {mod_name}...", advance=len(chunk))
-                    progress.update(progress_task, total=stream_length)
+                    progress.update(progress_task, description=f"> {spinner_char} {mod_name}...", advance=len(chunk))
                 file.seek(0)
                 with open(join(self.mods_cache_dir, mod_filename), 'wb') as f:
                     f.write(file.getbuffer())
@@ -166,6 +140,8 @@ class Wolfpackmaker:
     
     def check_for_update(self, modpack_version):
         if exists(self.modpack_version_cached):
+            self.log.info(f"{self.modpack_version_cached}")
+            sys.exit()
             with open(self.modpack_version_cached, 'r') as f:
                 if f.read() == modpack_version:
                     return False
@@ -201,10 +177,15 @@ class Wolfpackmaker:
 
     def create_folders(self):
         Path(self.mods_dir).mkdir(parents=True, exist_ok=True)
+        self.log.debug(f"Successfully created directory {self.mods_dir}")
         Path(self.resourcepack_dir).mkdir(parents=True, exist_ok=True)
+        self.log.debug(f"Successfully created directory {self.resourcepack_dir}")
         Path(self.cached_dir).mkdir(parents=True, exist_ok=True)
+        self.log.debug(f"Successfully created directory {self.cached_dir}")
         Path(self.mods_cache_dir).mkdir(parents=True, exist_ok=True)
+        self.log.debug(f"Successfully created directory {self.mods_cache_dir}")
         Path(join(self.cached_dir, 'cached_config')).mkdir(parents=True, exist_ok=True)
+        self.log.debug(f"Successfully created directory {self.cached_dir}/cached_config")
 
     def process_lockfile(self, lockfile, clientonly=False, serveronly=False):
         self.mods = []
@@ -220,6 +201,7 @@ class Wolfpackmaker:
         modpack_version = ''
         if self.args.repo is not None and not '.lock' in self.args.repo:
             assets_list, modpack_version = await self.get_github_data()
+            self.check_for_update(modpack_version)
             if self.args.multimc:
                 ignored_cache = []
                 self.log.info("Updating config...")
@@ -383,21 +365,6 @@ class Wolfpackmaker:
         with open(self.mods_cached, 'w') as f:
             f.write(json.dumps(cached_mods))
 
-    def assemble_logger(self):
-        debug_mode = logging.DEBUG if self.args.verbose else logging.INFO
-        logging.basicConfig(
-            level=(debug_mode),
-            format="%(message)s",
-            datefmt="[%X]",
-            handlers=[RichHandler()]
-        )
-        current_time = time.time()
-        logfile_name = f'wolfpackmaker-{current_time}-output.log'
-        logfile = join(self.cached_dir, logfile_name)
-        fh = logging.FileHandler(logfile)
-        fh.setLevel(debug_mode)
-        self.log.addHandler(fh)
-
 
 def get_spinner():
     while True:
@@ -406,16 +373,14 @@ def get_spinner():
 
 
 if __name__ == "__main__":
-    init_traceback()
-    from rich import inspect
     w = Wolfpackmaker()
+    init_traceback(console=w.log)
     w.main()
     w.create_folders()
-    w.assemble_logger()
-    w.fancy_intro()
-    w.log.info(f"Wolfpackmaker / {Wolfpackmaker.VERSION}")
+    w.log.fancy_intro(description=f"Wolfpackmaker / {Wolfpackmaker.VERSION}")
     w.loop = asyncio.new_event_loop()
     w.loop.run_until_complete(
         w.get_mods(w.args.clientonly, w.args.serveronly)
     )
     w.log.info("We're done here.")
+    w.log.save_log()
