@@ -11,14 +11,12 @@ util_file = requests.get("https://raw.githubusercontent.com/WolfpackMC/wolfpackm
 file_path = dirname(__file__)
 
 if len(self_file.content) != getsize(f"{file_path}/wolfpackmaker/wolfpackmaker.py"):
-    print(getsize("wolfpackmaker/util.py"))
-    print(len(self_file.text))
     print("Updating wolfpackmaker.py...")
-    with open(realpath(f"wolfpackmaker/wolfpackmaker.py"), 'wb') as f:
+    with open(realpath(f"{file_path}/wolfpackmaker/wolfpackmaker.py"), 'wb') as f:
          f.write(self_file.content)
 if len(util_file.content) != getsize(f"{file_path}/wolfpackmaker/util.py"):
     print("Updating util.py...")
-    with open(realpath(f"{file_path}/util.py"), 'wb') as f:
+    with open(realpath(f"{file_path}/wolfpackmaker/util.py"), 'wb') as f:
          f.write(util_file.content)
 
 from wolfpackmaker.wolfpackmaker import Wolfpackmaker, get_spinner
