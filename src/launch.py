@@ -21,7 +21,7 @@ if len(util_file.content) != getsize(f"{file_path}/wolfpackmaker/util.py"):
     with open(realpath(f"{file_path}/util.py"), 'wb') as f:
          f.write(util_file.content)
 
-from wolfpackmaker.wolfpackmaker import Wolfpackmaker
+from wolfpackmaker.wolfpackmaker import Wolfpackmaker, get_spinner
 
 if __name__ == "__main__":
     w = Wolfpackmaker()
@@ -52,5 +52,10 @@ if __name__ == "__main__":
                 pass
         except AttributeError:
             pass
+    optifine_confirm = input("Would you like to install OptiFine? (y/N): ") == 'y' and True or False
+    if optifine_confirm:
+        from rich import inspect
+        inspect(w.minecraft_version)
+        #w.loop.run_until_complete(w.save_mod("Optifine", download_url, get_spinner(), "Optifine"))
     w.log.info("We're done here.")
     w.log.save_log("wolfpackmaker")

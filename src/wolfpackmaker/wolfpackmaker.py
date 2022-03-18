@@ -230,7 +230,9 @@ class Wolfpackmaker:
         modpack_version = ''
         if self.args.repo is not None and not '.lock' in self.args.repo:
             assets_list = await self.get_github_data()
-            self.mods = json.loads(assets_list.get('manifest.lock'))
+            assets_data = json.loads(assets_list.get('manifest.lock'))
+            self.mods = assets_data.get("mods")
+            self.minecraft_version = assets_data.get("version")
             self.check_for_update()
             with open(self.modpack_version_cached, 'w') as f:
                 f.write(self.modpack_version)
@@ -259,12 +261,16 @@ class Wolfpackmaker:
             if self.args.repo is not None and exists(self.args.repo):
                 self.log.info(f"Using custom lockfile: {self.args.repo}")
                 with open(self.args.repo, "r") as f:
-                    self.mods = json.loads(f.read())
+                    data = json.loads(f.read())
+                    self.mods = data.get("mods")
+                    self.minecraft_version = data.get("version")
             else:
                 if exists(join(getcwd(), 'manifest.lock')):
                     self.log.info(f"Custom lockfile not found, but we found a manifest.lock in {getcwd()}, using that instead")
                     with open(join(getcwd(), 'manifest.lock')) as f:
-                        self.mods = json.loads(f.read())
+                        data = json.loads(f.read())
+                        self.mods = data.get("mods")
+                        self.minecraft_version = data.get("version")
                 else:
                     sys.exit(self.log.critical(f"Custom lockfile not found: {self.args.repo}"))
         self.tasks = []

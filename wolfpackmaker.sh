@@ -2,10 +2,10 @@ python_bin=$(which python)
 
 echo $python_bin
 
-$python_bin -m pip install -r requirements-client.txt
+$python_bin -m pip install -r src/requirements-client.txt
 
-$python_bin src/launch.py $1
+$python_bin src/src/launch.py $@
 
-sleep 3
+sleep 10
 
 
