@@ -73,8 +73,9 @@ class Wolfpackmaker:
         self.parser.add_argument('-c', '--clientonly', help='Enable clientonly.', action='store_true', default=False)
         self.parser.add_argument('-s', '--serveronly', help='Enable serveronly.', action='store_true', default=False)
         self.parser.add_argument('-t', '--test', help='Test mode only Does not save any mod jars.', action='store_true', default=False)
-        self.parser.add_argument('-rs', '--release', help='Get release name.', default='latest')
+        self.parser.add_argument('-ni', '--noninteractive', help='Non interactive mode.', action='store_true', default=False)
         self.parser.add_argument('--dir', help=f'Custom directory for Wolfpackmaker. Defaults to {dirname(getcwd())}')
+
     
     def assemble_directories(self):
         self.current_dir = self.args.dir and self.args.dir or dirname(getcwd())

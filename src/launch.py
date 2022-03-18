@@ -50,10 +50,11 @@ if __name__ == "__main__":
                 pass
         except AttributeError:
             pass
-    optifine_confirm = input("Would you like to install OptiFine? (y/N): ") == 'y' and True or False
-    if optifine_confirm:
-        from rich import inspect
-        inspect(w.minecraft_version)
-        #w.loop.run_until_complete(w.save_mod("Optifine", download_url, get_spinner(), "Optifine"))
+    if not w.args.noninteractive:
+        optifine_confirm = input("Would you like to install OptiFine? (y/N): ") == 'y' and True or False
+        if optifine_confirm:
+            from rich import inspect
+            inspect(w.minecraft_version)
+            #w.loop.run_until_complete(w.save_mod("Optifine", download_url, get_spinner(), "Optifine"))
     w.log.info("We're done here.")
     w.log.save_log("wolfpackmaker")

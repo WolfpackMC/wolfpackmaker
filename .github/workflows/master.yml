@@ -17,7 +17,7 @@ jobs:
       - run: python3 -m pip install -r requirements.txt
       # - run: python3 util/curseforgedb.py
       - run: python3 src/wolfpackmaker/lock.py -m https://raw.githubusercontent.com/WolfpackMC/Wolfpack-Odin/master/manifest.yml
-      - run: python3 src/launch.py -t
+      - run: python3 src/launch.py -t -ni
       # - run: python3 util/installer.py
       # - run: python3 util/lock.py -m tests/manifest-fabric.yml
       # - run: python3 util/lock.py -m tests/manifest-forge.yml
