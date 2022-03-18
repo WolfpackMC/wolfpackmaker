@@ -1,9 +1,10 @@
 @echo off
 
 
-set install_dir=%INST_DIR%\python
+cd %INST_DIR%
+set install_dir=python
 for /f "delims=" %%D in ('dir %install_dir% /a:d /b') do set python_dir=%%~nxD
-set python_bin=%install_dir%\%python_dir%\tools\python
+set python_bin="%install_dir%\%python_dir%\tools\python"
 
 %python_bin% --version 2>NUL
 if errorlevel 1 (
@@ -12,12 +13,13 @@ if errorlevel 1 (
 )
 
 for /f "delims=" %%D in ('dir %install_dir% /a:d /b') do set python_dir=%%~nxD
-set python_bin=%install_dir%\%python_dir%\tools\python
+set python_bin="%install_dir%\%python_dir%\tools\python"
 
-%python_bin% -m pip install -r %INST_DIR%\src\requirements-client.txt --no-warn-script-location
+"%python_bin%" -m pip install -r "src\requirements-client.txt" --no-warn-script-location
 
 
-%python_bin% %INST_DIR%\src\src\launch.py %* -d %INST_DIR%\.minecraft\mods
+"%python_bin%" "src\src\launch.py" %* -d ".minecraft\mods" -v
+
 
 EXIT /B %ERRORLEVEL%
 
