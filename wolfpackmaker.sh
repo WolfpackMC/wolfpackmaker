@@ -4,7 +4,7 @@ echo $python_bin
 
 $python_bin -m pip install -r requirements-client.txt
 
-$python_bin src/wolfpackmaker/launch.py $1
+$python_bin src/launch.py $1
 
 sleep 3
 
