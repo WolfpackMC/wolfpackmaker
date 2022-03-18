@@ -7,7 +7,10 @@ import asyncio
 
 self_file = requests.get("https://raw.githubusercontent.com/WolfpackMC/wolfpackmaker/master/src/wolfpackmaker/wolfpackmaker.py", headers={'User-Agent': 'kalka.io'})
 util_file = requests.get("https://raw.githubusercontent.com/WolfpackMC/wolfpackmaker/master/src/wolfpackmaker/util.py", headers={'User-Agent': 'kalka.io'})
-if len(self_file.content) != getsize("wolfpackmaker/wolfpackmaker.py"):
+
+file_path = realpath("wolfpackmaker")
+
+if len(self_file.content) != getsize(f"{file_path}/wolfpackmaker.py"):
     print(getsize("wolfpackmaker/util.py"))
     print(len(self_file.text))
     print("Updating wolfpackmaker.py...")
@@ -15,7 +18,7 @@ if len(self_file.content) != getsize("wolfpackmaker/wolfpackmaker.py"):
          f.write(self_file.content)
 if len(util_file.content) != getsize("wolfpackmaker/util.py"):
     print("Updating util.py...")
-    with open(realpath("wolfpackmaker/util.py"), 'wb') as f:
+    with open(realpath(f"{file_path}/util.py"), 'wb') as f:
          f.write(util_file.content)
 
 from wolfpackmaker.wolfpackmaker import Wolfpackmaker
