@@ -1,3 +1,4 @@
+from genericpath import exists
 import requests
 
 from os import remove
@@ -51,10 +52,41 @@ if __name__ == "__main__":
         except AttributeError:
             pass
     if not w.args.noninteractive:
-        optifine_confirm = input("Would you like to install OptiFine? (y/N): ") == 'y' and True or False
-        if optifine_confirm:
-            from rich import inspect
-            inspect(w.minecraft_version)
-            #w.loop.run_until_complete(w.save_mod("Optifine", download_url, get_spinner(), "Optifine"))
+        download_url = ''
+        filename = ''
+        match w.minecraft_version:
+            case '1.16.5':
+                download_url = 'https://get.vulpera.com/Optifine?version=OptiFine_1.16.5_HD_U_G8.jar'
+            case '1.12.2':
+                download_url = 'https://get.vulpera.com/Optifine?version=preview_OptiFine_1.12.2_HD_U_G6_pre1.jar'
+            case '1.7.10':
+                download_url = 'https://get.vulpera.com/Optifine?version=OptiFine_1.7.10_HD_U_E7.jar'
+        filename = basename(download_url).replace('Optifine?version=', '')
+        if not exists(f"{w.mods_dir}/{filename}"):
+            w.log.info(
+            """
+            NOTICE!
+
+            You will have the choice of installing Optifine.
+            Please do note, that because of the way Optifine integrates with Minecraft and FML,
+            the load times will be [bold]significantly higher.[/bold]
+
+            It is usually worth the wait for slower computers, but if you're running a decent PC
+            it shouldn't be that necessary, unless you miss it that much.
+
+            Ultimately, I apologize for the long wait time should you install it, but there is nothing
+            I as a modpack developer can do about it.
+
+            """)
+            optifine_confirm = input("Would you like to install OptiFine? (y/N): ") == 'y' and True or False
+            if optifine_confirm:
+                from rich import inspect
+                inspect(w.minecraft_version)
+                w.log.info(f"Downloading OptiFine ({filename})...")
+                optifine_file = requests.get(download_url, stream=True)
+                with open(f"{w.mods_dir}/{filename}", "wb") as f:
+                    for c in optifine_file.iter_content():
+                        f.write(c)
+
     w.log.info("We're done here.")
     w.log.save_log("wolfpackmaker")
