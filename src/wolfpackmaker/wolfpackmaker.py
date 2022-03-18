@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import asyncio
 import io
 import json
 import platform
@@ -10,17 +9,16 @@ import sys
 import requests
 import zipfile
 from appdirs import user_cache_dir
-from os import getcwd, listdir, remove
-from os.path import abspath, dirname, exists, join, getsize
+from os import getcwd, remove
+from os.path import dirname, exists, join, getsize
 from pathlib import Path
 from rich.progress import BarColumn, DownloadColumn, Progress, TextColumn, TimeRemainingColumn, TransferSpeedColumn
 from rich.table import Column
-from rich.traceback import install as init_traceback
-from util import Log
+from wolfpackmaker.util import Log
 
 
 class Wolfpackmaker:
-    VERSION = '1.0.0'
+    VERSION = '1.1.0'
     log = Log()
 
     def main(self):
@@ -116,7 +114,7 @@ class Wolfpackmaker:
             refresh_per_second=60,
             expand=True
         ) as progress:
-            progress_task = progress.add_task(description=f"> {spinner_char} {mod_name}...")
+            progress_task = progress.add_task(description=f"[yellow]> [white]{spinner_char} [yellow]{mod_name}...")
             self.download_count[0] += 1
             with self.session.get(mod_downloadurl, stream=True) as r:
                 file = io.BytesIO()
@@ -135,6 +133,7 @@ class Wolfpackmaker:
                     file.seek(0)
                     with open(join(self.mods_dir, mod_filename), 'wb') as f:
                         f.write(file.getbuffer())
+                progress.update(progress_task, description=f"[green]> [white]{spinner_char} [green]{mod_name}")
 
     async def get_raw_data(self, url, to_json=False):
         with self.session.get(url) as r:
@@ -143,17 +142,16 @@ class Wolfpackmaker:
             else:
                 return r.content
     
-    def check_for_update(self, modpack_version, mods):
+    def check_for_update(self):
         if exists(self.modpack_version_cached):
             with open(self.modpack_version_cached, 'r') as f:
-                self.log.info(modpack_version)
+                self.log.info(self.modpack_version)
                 self.log.info(f.read())
                 f.seek(0)
-                if f.read() != modpack_version:
+                if int(f.read()) >= int(self.modpack_version):
                     return
                 else:
                     self.log.info("Modpack has an update!")
-                    from rich import inspect
                     try:
                         for m in self.cached_mod_ids:
                             if m['current']:
@@ -161,7 +159,8 @@ class Wolfpackmaker:
                     except KeyError:
                         cached_mod_id = self.cached_mod_ids[-1]
                     self.log.info("Deleting old versions...")
-                    new_mods = [m['filename'] for m in mods]
+                    new_mods = [m['filename'] for m in self.mods]
+                    flagged_mods = []
                     for mod in cached_mod_id['mods']:
                         if exists(f"{self.mods_dir}/{mod}"):
                             if mod in new_mods:
@@ -169,7 +168,10 @@ class Wolfpackmaker:
                                 continue
                             self.log.info(f"Updating {mod}...")
                             remove(f"{self.mods_dir}/{mod}")
+                            flagged_mods.append(mod)
                             pass
+                    for fm in flagged_mods:
+                        cached_mod_id['mods'].remove(fm)
                     cached_mod_id['current'] = False
     
     async def get_github_data(self):
@@ -184,10 +186,8 @@ class Wolfpackmaker:
         for g in github_json:
             if self.args.release == g.get("name"):
                 self.log.info(f"Using {g.get('name')} as the release selector.")
-                modpack_version = str(g.get("id"))
-                assets_list.update({"modpack_version": modpack_version})
-                with open(self.modpack_version_cached, 'w') as f:
-                    f.write(modpack_version)
+                self.modpack_version = str(g.get("id"))
+                assets_list.update({"modpack_version": self.modpack_version})
                 try:
                     assets = g.get("assets")
                 except KeyError as e:
@@ -197,7 +197,7 @@ class Wolfpackmaker:
                     name = asset.get('name')
                     if name in self.repo_info['github_files']:
                         assets_list.update({asset.get('name'): await self.get_raw_data(asset.get('browser_download_url'))})
-                return assets_list, modpack_version
+                return assets_list
 
     def create_folders(self):
         Path(self.mods_dir).mkdir(parents=True, exist_ok=True)
@@ -229,9 +229,11 @@ class Wolfpackmaker:
                 self.cached_mod_ids = json.loads(f.read())
         modpack_version = ''
         if self.args.repo is not None and not '.lock' in self.args.repo:
-            assets_list, modpack_version = await self.get_github_data()
-            mods = json.loads(assets_list.get('manifest.lock'))
-            self.check_for_update(modpack_version, mods)
+            assets_list = await self.get_github_data()
+            self.mods = json.loads(assets_list.get('manifest.lock'))
+            self.check_for_update()
+            with open(self.modpack_version_cached, 'w') as f:
+                f.write(self.modpack_version)
             if self.args.multimc:
                 ignored_cache = []
                 self.log.info("Updating config...")
@@ -253,21 +255,20 @@ class Wolfpackmaker:
                 if exists(join(cached_config_dir, 'mmc-pack.json')):
                     self.log.info("Copying MultiMC JSON files...")
                     shutil.copy(join(cached_config_dir, 'mmc-pack.json'), self.current_dir)
-            mods = json.loads(assets_list.get('manifest.lock'))
         else:
             if self.args.repo is not None and exists(self.args.repo):
                 self.log.info(f"Using custom lockfile: {self.args.repo}")
                 with open(self.args.repo, "r") as f:
-                    mods = json.loads(f.read())
+                    self.mods = json.loads(f.read())
             else:
                 if exists(join(getcwd(), 'manifest.lock')):
                     self.log.info(f"Custom lockfile not found, but we found a manifest.lock in {getcwd()}, using that instead")
                     with open(join(getcwd(), 'manifest.lock')) as f:
-                        mods = json.loads(f.read())
+                        self.mods = json.loads(f.read())
                 else:
                     sys.exit(self.log.critical(f"Custom lockfile not found: {self.args.repo}"))
         self.tasks = []
-        new_mods = [m.get("filename") for m in mods]
+        new_mods = [m.get("filename") for m in self.mods]
         try:
             cached_modpack_version = self.cached_mod_ids[-1]
         except IndexError:
@@ -286,7 +287,7 @@ class Wolfpackmaker:
             if self.meme_activated:
                 self.log.critical(f" Detected version {platform.version().lower()}! It's probably Cee...")
         self.log.info("Verifying cached mods...")
-        for m in mods:
+        for m in self.mods:
             try:
                 m['resourcepack']
                 self.log.info(f"Saving resourcepack {m['name']}...")
@@ -329,6 +330,10 @@ class Wolfpackmaker:
                     mod_dir_size = getsize(join(self.mods_dir, filename))
                 except FileNotFoundError:
                     mod_dir_size = 0
+                if mod_dir_size == 0 and (local_size == remote_size):
+                    self.log.debug("Using cached {} from {}".format(filename, self.mods_cache_dir))
+                    shutil.copy(f"{self.mods_cache_dir}/{filename}", f"{self.mods_dir}/{filename}")
+                    continue
                 verified = (local_size == remote_size) and (mod_dir_size == remote_size)
                 if not verified:
                     mismatch_size = (local_size != remote_size and abs(local_size - remote_size)) or (mod_dir_size != remote_size and abs(mod_dir_size - remote_size))
@@ -336,10 +341,12 @@ class Wolfpackmaker:
                     self.to_process.append(filename)
                     self.tasks.append([filename, download_url, remote_size, m['name']])
                     continue
-                self.log.debug("Using cached {} from {}".format(filename, self.mods_cache_dir))
             else:
-                self.to_process.append(filename)
-                self.tasks.append([filename, download_url, remote_size, m['name']])
+                try:
+                    m['flagged']
+                except KeyError:
+                    self.to_process.append(filename)
+                    self.tasks.append([filename, download_url, remote_size, m['name']])
         if self.tasks:
             from operator import itemgetter
             # Sort mods to download by filesize
@@ -400,32 +407,3 @@ def get_spinner():
     while True:
         for cursor in "-/|\\":
             yield cursor
-
-
-if __name__ == "__main__":
-    w = Wolfpackmaker()
-    init_traceback(console=w.log)
-    w.main()
-    w.create_folders()
-    w.log.fancy_intro(description=f"Wolfpackmaker / {Wolfpackmaker.VERSION}")
-    w.loop = asyncio.new_event_loop()
-    try:
-        w.loop.run_until_complete(
-            w.get_mods(w.args.clientonly, w.args.serveronly)
-        )
-    except KeyboardInterrupt:
-        w.log.info("Canceling!")
-        try:
-            w.log.info(f"Flagging {w.current_mod} for deletion as it was in the middle of being downloaded")
-            try:
-                remove(f"{w.mods_dir}/{w.current_mod}")
-            except FileNotFoundError:
-                pass
-            try:
-                remove(f"{w.mods_cache_dir}/{w.current_mod}")
-            except FileNotFoundError:
-                pass
-        except AttributeError:
-            pass
-    w.log.info("We're done here.")
-    w.log.save_log("wolfpackmaker")
