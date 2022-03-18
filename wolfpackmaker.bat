@@ -20,6 +20,6 @@ set python_bin=%install_dir%\%python_dir%\tools\python
 %python_bin% -m pip install -r ..\wolfpackmaker\requirements-client.txt --no-warn-script-location
 
 
-%python_bin% ..\src\wolfpackmaker\launch.py %*
+%python_bin% ..\src\launch.py %*
 EXIT /B %ERRORLEVEL%
 
