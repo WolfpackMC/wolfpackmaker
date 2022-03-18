@@ -185,20 +185,20 @@ class Wolfpackmaker:
             pass
         assets_list = {}
         for g in github_json:
-            if self.args.release == g.get("name"):
-                self.log.info(f"Using {g.get('name')} as the release selector.")
-                self.modpack_version = str(g.get("id"))
-                assets_list.update({"modpack_version": self.modpack_version})
-                try:
-                    assets = g.get("assets")
-                except KeyError as e:
-                    self.log.critical("Git data not found. Possible typo? Error: {}".format(e))
-                    sys.exit(1)
-                for asset in assets:
-                    name = asset.get('name')
-                    if name in self.repo_info['github_files']:
-                        assets_list.update({asset.get('name'): await self.get_raw_data(asset.get('browser_download_url'))})
-                return assets_list
+            self.log.info(f"Using {g.get('name')} as the release selector.")
+            self.modpack_version = str(g.get("id"))
+            assets_list.update({"modpack_version": self.modpack_version})
+            try:
+                assets = g.get("assets")
+            except KeyError as e:
+                self.log.critical("Git data not found. Possible typo? Error: {}".format(e))
+                sys.exit(1)
+            for asset in assets:
+                name = asset.get('name')
+                if name in self.repo_info['github_files']:
+                    assets_list.update({asset.get('name'): await self.get_raw_data(asset.get('browser_download_url'))})
+            break
+        return assets_list
 
     def create_folders(self):
         Path(self.mods_dir).mkdir(parents=True, exist_ok=True)
