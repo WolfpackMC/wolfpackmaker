@@ -174,13 +174,13 @@ async def fetch_mod_data(curseforge_url, mod, session, modpack_manifest, cf_data
         log.warning(
             f"Mod {mod['slug']} [{mod['name']}] does not have an apparent version for {mc_version}, tread with caution")
 
-minecraft_version = None
+minecraft_version = []
 
 async def process_modpack_config(manifest):
     chunked = True  # Should chunk
     curseforge_url = 'https://addons-ecs.forgesvc.net/api/v2/addon/'
     modpack_manifest = yaml.load(manifest, Loader=yaml.SafeLoader)
-    minecraft_version = modpack_manifest['version']
+    minecraft_version.append(modpack_manifest['version'])
     mods = modpack_manifest["mods"]
     # check for duplicates
     duplicate_mods = []
@@ -308,10 +308,10 @@ async def process_modpack_config(manifest):
 def save_lockfile():
     log.info("Saving lockfile...")
     with open('manifest.lock', 'w') as f:
-        f.write(json.dumps({"version": minecraft_version, "mods": found_mods}))
+        f.write(json.dumps({"version": minecraft_version[0], "mods": found_mods}))
     log.info("Saving pretty-printed file...")
     with open('manifest.json', 'w') as f:
-        f.write(json.dumps({"version": minecraft_version, "mods": found_mods}, indent=2))
+        f.write(json.dumps({"version": minecraft_version[0], "mods": found_mods}, indent=2))
 
 import requests
 

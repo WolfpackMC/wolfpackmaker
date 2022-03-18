@@ -1,7 +1,7 @@
 import requests
 
 from os import remove
-from os.path import getsize, dirname, realpath
+from os.path import getsize, dirname, realpath, basename
 from rich.traceback import install as init_traceback
 import asyncio
 

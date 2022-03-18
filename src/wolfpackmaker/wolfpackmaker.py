@@ -78,7 +78,7 @@ class Wolfpackmaker:
 
     
     def assemble_directories(self):
-        self.current_dir = self.args.dir and self.args.dir or dirname(getcwd())
+        self.current_dir = self.args.dir and self.args.dir or getcwd()
         self.parent_dir = dirname(self.current_dir)
         self.cached_dir = user_cache_dir('wolfpackmaker')
         self.minecraft_dir = join(self.current_dir, self.args.minecraft_dir)
