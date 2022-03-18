@@ -180,7 +180,7 @@ async def process_modpack_config(manifest):
     chunked = True  # Should chunk
     curseforge_url = 'https://addons-ecs.forgesvc.net/api/v2/addon/'
     modpack_manifest = yaml.load(manifest, Loader=yaml.SafeLoader)
-    minecraft_version.append(modpack_manifest['version'])
+    minecraft_version.append(modpack_manifest["version"])
     mods = modpack_manifest["mods"]
     # check for duplicates
     duplicate_mods = []
