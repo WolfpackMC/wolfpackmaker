@@ -7,16 +7,16 @@ import asyncio
 
 self_file = requests.get("https://raw.githubusercontent.com/WolfpackMC/wolfpackmaker/master/src/wolfpackmaker/wolfpackmaker.py", headers={'User-Agent': 'kalka.io'})
 util_file = requests.get("https://raw.githubusercontent.com/WolfpackMC/wolfpackmaker/master/src/wolfpackmaker/util.py", headers={'User-Agent': 'kalka.io'})
-if len(self_file.text) != getsize(realpath(f"wolfpackmaker/wolfpackmaker.py")):
+if len(self_file.content) != getsize(realpath(f"wolfpackmaker/wolfpackmaker.py")):
     print(getsize(realpath(f"wolfpackmaker/wolfpackmaker.py")))
     print(len(self_file.text))
     print("Updating wolfpackmaker.py...")
-    # with open(__file__, 'w') as f:
-    #     f.write(self_file)
-if len(util_file.text) != getsize(realpath(f"wolfpackmaker/util.py")):
+    with open(realpath(f"wolfpackmaker/wolfpackmaker.py"), 'wb') as f:
+         f.write(self_file.content)
+if len(util_file.content) != getsize(realpath(f"wolfpackmaker/util.py")):
     print("Updating util.py...")
-    # with open('util.py', 'w') as f:
-    #     f.write(self_file)
+    with open(realpath(f"wolfpackmaker/util.py"), 'wb') as f:
+         f.write(util_file.content)
 
 from wolfpackmaker.wolfpackmaker import Wolfpackmaker
 
@@ -32,6 +32,10 @@ if __name__ == "__main__":
             w.get_mods(w.args.clientonly, w.args.serveronly)
         )
     except KeyboardInterrupt:
+        try:
+            w.progress.update(w.progress_task, description=f"[red]{w.progress_task.description}")
+        except AttributeError:
+            pass
         w.log.info("Canceling!")
         try:
             w.log.info(f"Flagging {w.current_mod} for deletion as it was in the middle of being downloaded")
