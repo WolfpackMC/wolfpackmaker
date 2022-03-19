@@ -19,6 +19,8 @@ class Log(Console):
 
     def warn(self, msg):
         logging.root.level <= logging.WARN and self.log(f"[yellow][WARN][white] {msg}")
+    def warning(self, msg):
+        self.warn(msg)
     def info(self, msg):
         logging.root.level <= logging.INFO and self.log(f"[cyan][INFO][white] {msg}")
     def debug(self, msg):
