@@ -237,7 +237,7 @@ async def process_modpack_config(manifest):
             match v:
                 case {'id': id}:
                     if mod_data:
-                        continue
+                        pass
                     to_complete[0] += 1
                     log.info(f"Using {id} for {k}. This should guarantee a positive match.")
                     cf_get = await session.get(curseforge_url + str(id))
