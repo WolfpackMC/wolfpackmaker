@@ -236,26 +236,27 @@ async def process_modpack_config(manifest):
             has_id = [False]
             match v:
                 case {'id': id}:
-                    if mod_data:
-                        pass
-                    to_complete[0] += 1
-                    log.info(f"Using {id} for {k}. This should guarantee a positive match.")
-                    cf_get = await session.get(curseforge_url + str(id))
-                    data = await cf_get.json()
-                    if k != data['slug']:
-                        sys.exit(log.critical(f"Mod mismatch! {k} =/= {data['slug']}. This is usually impossible unless you are using the wrong mod ID."))
-                    log.info(f"[MATCH] [{completed[0]}/{to_complete[0]}] Resolved {data['name']} through CurseForge!")
-                    found_mods.append({
-                        "id": data['id'],
-                        "slug": data['slug'],
-                        "name": data['name'],
-                        "clientonly": client_only,
-                        "serveronly": server_only,
-                        "optional": optional
-                    })
-                    task = asyncio.create_task(fetch_mod_data(curseforge_url, data, session, modpack_manifest, curseforge_data, completed, to_complete))
-                    tasks.append(task)
-                    has_id[0] = True
+                    try:
+                        mod_data["filename"]
+                    except KeyError:
+                        to_complete[0] += 1
+                        log.info(f"Using {id} for {k}. This should guarantee a positive match.")
+                        cf_get = await session.get(curseforge_url + str(id))
+                        data = await cf_get.json()
+                        if k != data['slug']:
+                            sys.exit(log.critical(f"Mod mismatch! {k} =/= {data['slug']}. This is usually impossible unless you are using the wrong mod ID."))
+                        log.info(f"[MATCH] [{completed[0]}/{to_complete[0]}] Resolved {data['name']} through CurseForge!")
+                        found_mods.append({
+                            "id": data['id'],
+                            "slug": data['slug'],
+                            "name": data['name'],
+                            "clientonly": client_only,
+                            "serveronly": server_only,
+                            "optional": optional
+                        })
+                        task = asyncio.create_task(fetch_mod_data(curseforge_url, data, session, modpack_manifest, curseforge_data, completed, to_complete))
+                        tasks.append(task)
+                        has_id[0] = True
                 case {'url': url}:
                     task = asyncio.create_task(set_content_length(url, session, k))
                     tasks.append(task)
