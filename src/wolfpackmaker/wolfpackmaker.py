@@ -237,27 +237,26 @@ class Wolfpackmaker:
             self.check_for_update()
             with open(self.modpack_version_cached, 'w') as f:
                 f.write(self.modpack_version)
-            if self.args.multimc:
-                ignored_cache = []
-                self.log.info("Updating config...")
-                config_bytes = io.BytesIO(assets_list.get('config.zip'))
-                config_zip = zipfile.ZipFile(config_bytes)
-                cached_config_dir = join(self.cached_dir, 'cached_config')
-                config_zip.extractall(cached_config_dir)
-                if exists(join(cached_config_dir, '.configignore')):
-                    with open(join(cached_config_dir, '.configignore'), 'r') as f:
-                        for l in f.read().splitlines():
-                            ignored_cache += [l]
-                self.log.info("Checking for ignored configs...")
-                for c in ignored_cache:
-                    if exists(join(cached_config_dir, c)):
-                        self.log.info(f"Ignoring {c}...")
-                        remove(join(cached_config_dir, c))
-                self.log.info("Copying new config to directory...")
-                shutil.copytree(cached_config_dir, self.config_dir, dirs_exist_ok=True)
-                if exists(join(cached_config_dir, 'mmc-pack.json')):
-                    self.log.info("Copying MultiMC JSON files...")
-                    shutil.copy(join(cached_config_dir, 'mmc-pack.json'), self.current_dir)
+            ignored_cache = []
+            self.log.info("Updating config...")
+            config_bytes = io.BytesIO(assets_list.get('config.zip'))
+            config_zip = zipfile.ZipFile(config_bytes)
+            cached_config_dir = join(self.cached_dir, 'cached_config')
+            config_zip.extractall(cached_config_dir)
+            if exists(join(cached_config_dir, '.configignore')):
+                with open(join(cached_config_dir, '.configignore'), 'r') as f:
+                    for l in f.read().splitlines():
+                        ignored_cache += [l]
+            self.log.info("Checking for ignored configs...")
+            for c in ignored_cache:
+                if exists(join(self.config_dir, c)):
+                    self.log.info(f"Ignoring {c}...")
+                    remove(join(cached_config_dir, c))
+            self.log.info("Copying new config to directory...")
+            shutil.copytree(join(cached_config_dir, '.minecraft/config'), self.config_dir, dirs_exist_ok=True)
+            if exists(join(cached_config_dir, 'mmc-pack.json')):
+                self.log.info("Copying MultiMC JSON files...")
+                shutil.copy(join(cached_config_dir, 'mmc-pack.json'), self.current_dir)
         else:
             if self.args.repo is not None and exists(self.args.repo):
                 self.log.info(f"Using custom lockfile: {self.args.repo}")
@@ -289,7 +288,7 @@ class Wolfpackmaker:
                 self.log.info("Already saved modpack version...")
                 continue
             self.cached_mods.append(k)
-        self.cached_mods.append({'id': modpack_version, 'mods': new_mods, 'current': True})
+        self.cached_mods.append({'id': modpack_version, 'mods': new_mods, 'current': True, })
         if 'darwin' in platform.version().lower():
             if self.meme_activated:
                 self.log.critical(f" Detected version {platform.version().lower()}! It's probably Cee...")
