@@ -154,7 +154,7 @@ class Wolfpackmaker:
             #     self.log.info(f"Updating {mod}...")
             #     remove(f"{self.mods_dir}/{mod}")
             #     flagged_mods.append(mod)
-            #     passololol
+            #     passolololdfsahbm,dhsewafdwqehgfjasghfdewqhlkjdasbghjdfghaskgdhjasgjdkasghdjgakjdgahsjdas
             remove(f"{self.mods_dir}/{mod}")
             print(f"Removed {mod}")
             self.log.info(mod)
