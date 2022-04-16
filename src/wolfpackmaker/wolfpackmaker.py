@@ -18,7 +18,7 @@ from wolfpackmaker.util import Log
 
 
 class Wolfpackmaker:
-    VERSION = '1.1.0'
+    VERSION = '1.1.1'
     log = Log()
 
     def main(self):
