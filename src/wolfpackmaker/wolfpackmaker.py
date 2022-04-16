@@ -146,6 +146,18 @@ class Wolfpackmaker:
     def check_for_update(self):
         if exists(self.modpack_version_cached):
             with open(self.modpack_version_cached, 'r') as f:
+                self.log.info("Cleaning mods folder... (It's the only way right now to prevent conflicts :c)")
+                downloaded_mods = listdir(self.mods_dir)
+                for mod in downloaded_mods:
+                    # if exists(f"{self.mods_dir}/{mod}"):
+                    #     if mod in new_mods:
+                    #         self.log.debug(f"Not necessary, mod {mod} remained unchanged")
+                    #         continue
+                    #     self.log.info(f"Updating {mod}...")
+                    #     remove(f"{self.mods_dir}/{mod}")
+                    #     flagged_mods.append(mod)
+                    #     pass
+                    remove(f"{self.mods_dir}/{mod}")
                 self.log.info(self.modpack_version)
                 self.log.info(f.read())
                 f.seek(0)
@@ -162,18 +174,6 @@ class Wolfpackmaker:
                     #self.log.info("Deleting old versions...")
                     new_mods = [m['filename'] for m in self.mods]
                     flagged_mods = []
-                    self.log.info("Cleaning mods folder... (It's the only way right now to prevent conflicts :c)")
-                    downloaded_mods = listdir(self.mods_dir)
-                    for mod in downloaded_mods:
-                        # if exists(f"{self.mods_dir}/{mod}"):
-                        #     if mod in new_mods:
-                        #         self.log.debug(f"Not necessary, mod {mod} remained unchanged")
-                        #         continue
-                        #     self.log.info(f"Updating {mod}...")
-                        #     remove(f"{self.mods_dir}/{mod}")
-                        #     flagged_mods.append(mod)
-                        #     pass
-                        remove(f"{self.mods_dir}/{mod}")
                     for fm in flagged_mods:
                         cached_mod_id['mods'].remove(fm)
                     cached_mod_id['current'] = False
