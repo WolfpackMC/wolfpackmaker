@@ -9,7 +9,7 @@ import sys
 import requests
 import zipfile
 from appdirs import user_cache_dir
-from os import getcwd, remove
+from os import getcwd, listdir, remove
 from os.path import dirname, exists, join, getsize
 from pathlib import Path
 from rich.progress import BarColumn, DownloadColumn, Progress, TextColumn, TimeRemainingColumn, TransferSpeedColumn
@@ -159,18 +159,21 @@ class Wolfpackmaker:
                                 cached_mod_id = m
                     except KeyError:
                         cached_mod_id = self.cached_mod_ids[-1]
-                    self.log.info("Deleting old versions...")
+                    #self.log.info("Deleting old versions...")
                     new_mods = [m['filename'] for m in self.mods]
                     flagged_mods = []
-                    for mod in cached_mod_id['mods']:
-                        if exists(f"{self.mods_dir}/{mod}"):
-                            if mod in new_mods:
-                                self.log.debug(f"Not necessary, mod {mod} remained unchanged")
-                                continue
-                            self.log.info(f"Updating {mod}...")
-                            remove(f"{self.mods_dir}/{mod}")
-                            flagged_mods.append(mod)
-                            pass
+                    self.log.info("Cleaning mods folder... (It's the only way right now to prevent conflicts :c)")
+                    downloaded_mods = listdir(self.mods_dir)
+                    for mod in downloaded_mods:
+                        # if exists(f"{self.mods_dir}/{mod}"):
+                        #     if mod in new_mods:
+                        #         self.log.debug(f"Not necessary, mod {mod} remained unchanged")
+                        #         continue
+                        #     self.log.info(f"Updating {mod}...")
+                        #     remove(f"{self.mods_dir}/{mod}")
+                        #     flagged_mods.append(mod)
+                        #     pass
+                        remove(f"{self.mods_dir}/{mod}")
                     for fm in flagged_mods:
                         cached_mod_id['mods'].remove(fm)
                     cached_mod_id['current'] = False
