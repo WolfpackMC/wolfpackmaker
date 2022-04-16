@@ -154,7 +154,7 @@ class Wolfpackmaker:
             #     self.log.info(f"Updating {mod}...")
             #     remove(f"{self.mods_dir}/{mod}")
             #     flagged_mods.append(mod)
-            #     pass
+            #     passololol
             remove(f"{self.mods_dir}/{mod}")
         if exists(self.modpack_version_cached):
             with open(self.modpack_version_cached, 'r') as f:
