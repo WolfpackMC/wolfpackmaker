@@ -156,6 +156,7 @@ class Wolfpackmaker:
             #     flagged_mods.append(mod)
             #     passololol
             remove(f"{self.mods_dir}/{mod}")
+            print(f"Removed {mod}")
             self.log.info(mod)
         if exists(self.modpack_version_cached):
             with open(self.modpack_version_cached, 'r') as f:
