@@ -39,7 +39,6 @@ class WolfpackMaker(WolfpackUtil):
         self.modpack_name = self.args.repo.lower()
 
         self.headers = {
-            'Authorization': 'token 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',
             'User-Agent': f'{self.name} {self.version}'
         }
 
