@@ -26,7 +26,7 @@ setup(
     packages=packages,
     python_requires=">=3.10",
     install_requires=[
-        "wolfpackutil>=0.1.4"
+        "wolfpackutil>=0.1.5"
     ],
     scripts=['bin/wolfpackmaker']
 )
