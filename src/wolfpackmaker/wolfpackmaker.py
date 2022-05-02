@@ -83,6 +83,10 @@ class WolfpackMaker(WolfpackUtil):
                 self.log.info("Modpack is already up to date.")
                 self.needs_update = False
 
+            if self.args.force:
+                self.needs_update = True
+                self.log.info("Forcing update.")
+
             mod_data = {}
 
             for asset in modpack_data['assets']:
@@ -200,6 +204,7 @@ class WolfpackMaker(WolfpackUtil):
                             help=f"Specify the launcher. Available launchers: {[launcher for launcher in self.launchers]}")
         parser.add_argument('-d', '--download', help='Custom download directory')
         parser.add_argument('--cache', help='Custom cache directory')
+        parser.add_argument('-f', '--force', help='Force update.', action='store_true')
         return parser
 
     def create_folders(self):
