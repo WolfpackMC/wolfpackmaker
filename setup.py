@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="wolfpackmaker",
-    version="2.0.1",
+    version="2.0.2",
     author="Kalka",
     author_email="kalka2088@gmail.com",
     description="Python script helper to download WolfpackMC modpack resources for client launching. "
@@ -19,3 +19,5 @@ setuptools.setup(
     ],
     scripts=['bin/wolfpackmaker']
 )
+
+# TODO: Autobuild on Github Actions for Wolfpackmaker and Wolfpackutil
