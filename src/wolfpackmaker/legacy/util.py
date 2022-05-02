@@ -13,6 +13,8 @@ import random
 import owoify
 from pyfiglet import Figlet
 
+
+
 class Log(Console):
     log_contents = {}
     f = Figlet()

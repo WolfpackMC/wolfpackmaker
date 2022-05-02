@@ -1,7 +1,6 @@
-# wolfpackmaker
+# wolfpackmaker 2
 
-A set up of Python 3 helper scripts to build Wolfpack modpacks.
+The second version of wolfpackmaker, now rewritten as an actual Python package.
 
-The `lock.py` utility file requires Python 3.10 or later.
+This is mostly a set up of Python 3 helper scripts to build Wolfpack modpacks.
 
-To learn more, visit https://woofmc.xyz.

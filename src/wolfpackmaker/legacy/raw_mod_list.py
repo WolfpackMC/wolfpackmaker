@@ -11,7 +11,7 @@ from os import path
 from util import Log
 
 
-class ModList():
+class ModList:
     author = "WolfpackMC"
     repo = ""
 
