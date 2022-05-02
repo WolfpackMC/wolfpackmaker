@@ -15,7 +15,7 @@ jobs:
       uses: actions/checkout@v3
     - name: 🐍 Setup Python
       uses: actions/setup-python@v3
-      run: pip install build
+    - run: pip install build
     - name: 🛠️ Build package
       run: python -m build
     - name: ✔️Publish package
