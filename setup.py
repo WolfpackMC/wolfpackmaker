@@ -11,7 +11,7 @@ for p in packages:
 
 setup(
     name="wolfpackmaker",
-    version="2.0.9",
+    version="2.0.10",
     author="Kalka",
     author_email="kalka2088@gmail.com",
     description="Python script helper to download WolfpackMC modpack resources for client launching. "
@@ -26,7 +26,7 @@ setup(
     packages=packages,
     python_requires=">=3.10",
     install_requires=[
-        "wolfpackutil>=0.1.5"
+        "wolfpackutil"
     ],
     scripts=['bin/wolfpackmaker']
 )
