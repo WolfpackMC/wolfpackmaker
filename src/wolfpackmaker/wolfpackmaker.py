@@ -1,7 +1,5 @@
 import io
-import json
 import shutil
-from argparse import ArgumentParser
 from os import getcwd, remove
 from os.path import dirname, join, exists
 from pathlib import Path
@@ -9,16 +7,14 @@ from zipfile import ZipFile
 
 from appdirs import user_cache_dir
 from pkg_resources import get_distribution
-from requests import Session
 from rich.progress import TextColumn, TransferSpeedColumn, DownloadColumn, BarColumn, TimeRemainingColumn, Progress
 from rich.table import Column
-from tinydb import TinyDB, Query
-from wolfpackutil import util
+from wolfpackmaker.launchers.multimc import MultiMC
 
-from .launchers.multimc import MultiMC
+from wolfpackutil import WolfpackUtil
 
 
-class WolfpackMaker(util.WolfpackUtil, util.Parser):
+class WolfpackMaker(WolfpackUtil):
     launchers = [
         "multimc"
     ]
@@ -27,10 +23,9 @@ class WolfpackMaker(util.WolfpackUtil, util.Parser):
         super().__init__()
         self.__version__ = get_distribution('wolfpackmaker').version
 
-        info = f"Wolfpackmaker {self.__version__}".split()
-        self.name = info[0].lower()
-        self.version = info[1]
-        self.log = util.Log()
+        self.info = f"Wolfpackmaker {self.__version__}".split()
+        self.name = self.info[0].lower()
+        self.version = self.info[1]
         self.parser = self.init_args()
         self.args = self.parser.parse_args()
         self.log.parse_log(self.args)
@@ -44,7 +39,8 @@ class WolfpackMaker(util.WolfpackUtil, util.Parser):
         self.modpack_name = self.args.repo.lower()
 
         self.headers = {
-            'Authorization': 'token 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'
+            'Authorization': 'token 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',
+            'User-Agent': f'{self.name} {self.version}'
         }
 
         self.current_dir = self.args.dir and self.args.dir or getcwd()
@@ -65,14 +61,13 @@ class WolfpackMaker(util.WolfpackUtil, util.Parser):
         self.mods_cache_dir = \
             self.args.cache and join(self.current_dir, self.args.cache) or join(self.cached_dir, "mods")
 
-        self.db = None
         self.version = None
         self.new_version = None
         self.needs_update = True
 
     def main(self):
         self.create_folders()
-        with Session() as session:
+        with self.Session() as session:
             session.headers.update(self.headers)
             self.log.info("Getting GitHub data...")
             github_data = session.get(self.github_url.format(self.repo_info['user'], self.repo_info['repo']))
@@ -82,9 +77,7 @@ class WolfpackMaker(util.WolfpackUtil, util.Parser):
                 with open(f'{self.minecraft_dir}/VERSION') as fh:
                     self.version = fh.read()
 
-            content = github_data.content
-
-            modpack_data = json.loads(content)[0]
+            modpack_data = github_data.json()[0]
             self.new_version = str(modpack_data['id'])
 
             if self.version == str(modpack_data['id']):
@@ -139,8 +132,9 @@ class WolfpackMaker(util.WolfpackUtil, util.Parser):
                             verified = False
 
                         if not verified:
-                            print("\t"+
-                                f"{mod['name']} requires a re-download. {local_length} / {mod['fileLength']} byte mismatch")
+                            print("\t" +
+                                  f"{mod['name']} requires a re-download. "
+                                  f"{local_length} / {mod['fileLength']} byte mismatch")
                             to_download.append(mod)
                     else:
                         to_download.append(mod)
@@ -154,14 +148,15 @@ class WolfpackMaker(util.WolfpackUtil, util.Parser):
 
             for mod in sorted_mods:
                 with Progress(
-                    TextColumn("\t> [yellow][progress.description]{task.description}", table_column=Column(ratio=4)),
-                    TransferSpeedColumn(table_column=Column(ratio=4)),
-                    DownloadColumn(table_column=Column(ratio=2)),
-                    BarColumn(bar_width=None, table_column=Column(ratio=2)),
-                    "[progress.percentage]{task.percentage:>3.0f}%",
-                    TimeRemainingColumn(),
-                    refresh_per_second=60,
-                    expand=True
+                        TextColumn("\t> [yellow][progress.description]{task.description}",
+                                   table_column=Column(ratio=4)),
+                        TransferSpeedColumn(table_column=Column(ratio=4)),
+                        DownloadColumn(table_column=Column(ratio=2)),
+                        BarColumn(bar_width=None, table_column=Column(ratio=2)),
+                        "[progress.percentage]{task.percentage:>3.0f}%",
+                        TimeRemainingColumn(),
+                        refresh_per_second=60,
+                        expand=True
                 ) as p:
                     task = p.add_task(description=mod['name'], total=int(mod['fileLength']))
                     mod_r = session.get(mod['downloadUrl'], stream=True)
@@ -176,18 +171,19 @@ class WolfpackMaker(util.WolfpackUtil, util.Parser):
         with open(f'{self.minecraft_dir}/VERSION', 'w') as fh:
             fh.write(self.new_version)
 
-        db = TinyDB(f"{self.minecraft_dir}/history.json")
-        query = Query()
+        db = self.DB(f"{self.minecraft_dir}/history.json")
 
-        if not db.contains(query.id == modpack_data['id']):
-            db.insert({"id": modpack_data['id'], "data": {"github_data": modpack_data, "mod_data": mod_data['manifest.lock']}})
+        if not db.contains(db.q.id == modpack_data['id']):
+            db.insert({"id": modpack_data['id'],
+                       "data": {"github_data": modpack_data, "mod_data": mod_data['manifest.lock']}})
 
         if self.args.launcher is None:
             self.log.warn(f"Please choose a launcher. Available launchers: {[launcher for launcher in self.launchers]}")
             return
 
         if self.args.launcher not in self.launchers:
-            self.log.warn(f"{self.args.launcher} is not supported at this time. Available launchers: {[launcher for launcher in self.launchers]}")
+            self.log.warn(
+                f"{self.args.launcher} is not supported at this time. Available launchers: {[launcher for launcher in self.launchers]}")
             return
 
         if self.args.launcher == 'multimc':
@@ -195,7 +191,7 @@ class WolfpackMaker(util.WolfpackUtil, util.Parser):
             MultiMC(self)
 
     def init_args(self):
-        parser = ArgumentParser(description=self.description)
+        parser = self.Parser(description=f"{self.name} {self.version}", prog=f"{self.name}")
         parser.add_argument('-v', '--verbose', help='Increase output verbosity.', action='store_true')
         parser.add_argument('-r', '--repo', help="Wolfpack modpack repository.", required=True)
         parser.add_argument('--dir', help=f'Custom directory for Wolfpackmaker. Defaults to {dirname(getcwd())}')
@@ -224,4 +220,3 @@ class WolfpackMaker(util.WolfpackUtil, util.Parser):
         self.log.debug(f"Successfully created directory {join(self.cached_dir, 'cached_config')}")
         Path(self.modpacks_dir).mkdir(parents=True, exist_ok=True)
         self.log.debug(f"Successfully created directory {self.modpacks_dir}")
-

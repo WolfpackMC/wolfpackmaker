@@ -42,7 +42,7 @@ class MultiMC:
 
             shutil.copytree(join(wfi.minecraft_dir, "config"), join(multimc_dir, "config"), dirs_exist_ok=True)
 
-        db = TinyDB(f"{wfi.minecraft_dir}/history.json")
+        db = wfi.DB(f"{wfi.minecraft_dir}/history.json")
 
         modpack_data_cache = db.all()
 
